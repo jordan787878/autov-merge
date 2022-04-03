@@ -2,6 +2,9 @@
 
 import numpy as np
 from itertools import product
+import controllerHL
+from car import Car
+
 import copy
 from visualize import *
 
@@ -41,12 +44,13 @@ class ControllerEF:
 
 
     def setup(self,my_car,opp_car,lane_width=2.5):
+        print("Set up Ego Follower Controller")
         # Opp Car for their States
         self.my_car = my_car
         self.opp_car = opp_car
 
         # Est opp Car for Trajectory Prediction
-        self.est_opp_car = copy.deepcopy(self.opp_car)
+        #self.est_opp_car = copy.deepcopy(self.opp_car)
 
         # action set (follower)
         self.action_set = self.get_all_actions(my_car.actionspace)
@@ -60,6 +64,11 @@ class ControllerEF:
         for i in range(self.horizon):
             self.discount[i] = pow(0.9,i)
 
+
+    def setup_est_opp_control(self):
+        print("Ego Follower setup Estimate Human Leader")
+        self.est_opp_car = copy.deepcopy(self.opp_car)
+        
     def select_action(self):
         opt_actions, opt_traj = self.select_opt_actions()
         
@@ -77,16 +86,23 @@ class ControllerEF:
 #            print("ego select opt actions call from human")
 #            print(self.num_actions)
 #            print(self.num_opp_actions)
-
+        
+        # Init Q Matrix
         Qfi = np.zeros(self.num_actions)
         Qf = np.zeros((self.num_actions,self.num_opp_actions))
 
         # Obtain Predicting Trajectories
+        ### Debug ###
+        #print("ego follower select opt actions fcn()")
+        #print(self.opp_car)
+        #print(self.opp_car.s)
+
         traj_ego = self.get_my_traj(self.my_car.s,self.action_set)
-        traj_hum = self.get_opp_traj(self.est_opp_car.s,self.opp_action_set)
+        traj_hum = self.get_opp_traj(self.opp_car.s,self.opp_action_set)
 
         # Update Est opp car Pos
-        self.est_opp_car.s = copy.deepcopy(self.opp_car.s)
+        #print("update est opp car pos")
+        #self.est_opp_car.s = copy.deepcopy(self.opp_car.s)
 
         for i in range(self.num_actions):
             
@@ -113,19 +129,6 @@ class ControllerEF:
 #            print("ego opt actions: ",opt_actions)
 
         return opt_actions, opt_traj
-
-#        Qf1 = self.compute_Qf(0)
-
-        ##### Visualize #####
-        #print(Qf1)
-#        vis_Qmatrix(Qf1, self.action_set, np.array([1]), name = "ego follower Qf")
-
-#        opt_traj_idx = np.argmax(Qf1)
-#        opt_actions = self.action_set[opt_traj_idx,:]
-
-#        print("opt Ego Follower actions:\t", opt_actions)
-
-#        return opt_actions
 
 
     def compute_reward(self,traj_ego,traj_hum,act_idx):
@@ -203,14 +206,6 @@ class ControllerEF:
                 col_flag[k] = 1
         
         return col_flag
-        '''
-        if min(abs(x_diff)) >= MERGE_SAFE_DIST or min(abs(y_diff)) >= 2.4:
-            col_flag = 0
-        else:
-            col_flag = 1
-
-        return col_flag
-        '''
 
     ### helper function ###
 
@@ -280,16 +275,16 @@ class ControllerEF:
                 act = acti[k]
                 # Decl
                 if act == 0:
-                    u = -1*self.est_opp_car.accel
+                    u = -1*self.opp_car.accel
                 # Cruise
                 elif act == 1:
                     u = 0
                 # Acel
                 else:
-                    u = 1*self.est_opp_car.accel
+                    u = 1*self.opp_car.accel
 
                 v = v + u*dt
-                v = np.clip(v,self.est_opp_car.min_v,self.est_opp_car.max_v)
+                v = np.clip(v,self.opp_car.min_v,self.opp_car.max_v)
                 x = x + v*dt
                 traj[i,:,k+1] = np.array([x,y,v,yaw])
 

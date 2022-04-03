@@ -31,7 +31,7 @@ def main():
     # NOTE: CARS
     # Human 1: HighWay (Follower)
     x0_h1 = np.random.randint(0,60)
-    #x0_h1 = 10 
+    #x0_h1 = 0 
 
     s_h1 = np.array([x0_h1,2.5,V0,0])
     # Init Controllers
@@ -39,26 +39,10 @@ def main():
     cont_longi1 = ControllerLongi("longi")
     # Init Car Human1
     human1 = Car(s_h1,aspace_highway,cont_hf1,"human1",V_CONSTRAINT, ACCEL)
-
-    '''
-    ##############################
-    # Human 2: HighWay (Follower)
-    x0_h2 = np.random.randint(20,40)
-    s_h2 = np.array([x0_h2,2.5,V0,0])
-    cont_hf2 = ControllerHF("follower",horizon)
-    human2 = Car(s_h2,aspace_highway,cont_hf2,"human2",V_CONSTRAINT, ACCEL)
-
-    ##############################
-    # Human 3: HighWay (Follower)
-    x0_h3 = np.random.randint(40,60)
-    s_h3 = np.array([x0_h3,2.5,V0,0])
-    cont_hf3 = ControllerHF("follower",horizon)
-    human3 = Car(s_h3,aspace_highway,cont_hf3,"human3",V_CONSTRAINT, ACCEL)
-    '''
     ##############################
     # Ego 1: (Follower)
     x0_eg = np.random.randint(0,60)
-    #x0_eg = x0_h1 - 10
+    #x0_eg = x0_h1 + 18
 
     s = np.array([x0_eg,0,V0,0])
     cont = ControllerEF("ego_follower",horizon)
@@ -66,20 +50,13 @@ def main():
 
     ############################################################################
     # NOTE: Setup Controller Dependency
-    #human1.add_control_longi(cont_longi1)
     human1.controller.setup(human1, ego1,   lane_width=LANE_WIDTH)
-    #human1.controller_longi.setup(human1, human2)
-
-    #human2.controller.setup(human2, ego1,   lane_width=LANE_WIDTH)
-
-    #human3.controller.setup(human3, ego1,   lane_width=LANE_WIDTH)
-    
-    #ego1.controller.setup  (ego1,   [human1,human2,human3], lane_width=LANE_WIDTH)
     ego1.controller.setup  (ego1,   human1, lane_width=LANE_WIDTH)
 
-    human1.controller.setup_est_opp()
+    human1.controller.setup_est_opp_control()
+    ego1.controller.setup_est_opp_control()
     ############################################################################
-    
+
     ### Env ###
     merge_done = False
     i = 1
@@ -99,21 +76,6 @@ def main():
             merge_done = True
 
         print("\nstep: ",i)
-        '''
-        states.append(np.hstack((ego1.s,human1.s,human2.s,human3.s)))
-        actions.append(np.hstack((ego1.car_action,human1.car_action,human2.car_action,human3.car_action)))
-        x_log = "x (e,h1,h2,h3) {:1.1f} {:1.1f} {:1.1f} {:1.1f}".format(ego1.s[0],human1.s[0],human2.s[0],human3.s[0])
-        print(x_log)
-
-        human1.update(dt)
-        human2.update(dt)
-        human3.update(dt)
-        ego1.update(dt)
-        i += 1
-
-        a_log = "a (e,h1,h2,h3) {:3d} {:3d} {:3d} {:3d}".format(ego1.car_action, human1.car_action, human2.car_action, human3.car_action)
-        print(a_log)
-        '''
         states.append(np.hstack((ego1.s,human1.s)))
         actions.append(np.hstack((ego1.car_action,human1.car_action)))
         x_log = "x (e,h1) {:1.1f} {:1.1f} ".format(ego1.s[0],human1.s[0])

@@ -3,6 +3,10 @@
 import numpy as np
 from itertools import product
 import matplotlib.pyplot as plt
+from controllerEF import ControllerEF
+from car import Car
+
+
 from visualize import *
 
 import copy
@@ -18,6 +22,7 @@ IsVis = False
 
 class ControllerHL:
     def __init__(self,name,horizon):
+        print("init HL controller")
         self.name = name
         self.horizon = horizon
         self.action = None
@@ -38,6 +43,7 @@ class ControllerHL:
         self.discount = np.zeros(self.horizon)
 
     def setup(self,my_car,opp_car,lane_width=2.5):
+        print("Set up HL controller")
         # Opp Car for their States
         self.my_car = my_car
         self.opp_car = opp_car
@@ -55,10 +61,8 @@ class ControllerHL:
             self.discount[i] = pow(0.9,i)
 
 
-    def setup_est_opp(self):
-        # Est opp Car for Trajectory Prediction
-        self.est_opp_car = copy.deepcopy(self.opp_car)
-        self.est_opp_car.controller.name = "est ego from human1"
+    def setup_est_opp_control(self):
+        self.est_opp_car = self.opp_car
 
 
     def select_action(self):
@@ -101,18 +105,7 @@ class ControllerHL:
         
         return opt_actions, opt_traj
 
-    '''
-    def compute_returns(self,traj_ego,traj_hum,idx_ego,idx_hum):
-        returns = 0
-        
-        # states predict: (time, (x_ego,y_ego,v_ego,yaw_ego,x_hum,y_hum,v_hum,yaw_hum))
-        states_predict = np.hstack((traj_ego.T,traj_hum.T))
-        
-        returns = self.compute_reward(states_predict,idx_ego,idx_j)
 
-        return returns
-    '''
-   
     def compute_reward(self,traj_ego,traj_hum):
        
         s_pred = np.hstack((traj_ego.T,traj_hum.T))
@@ -168,7 +161,7 @@ class ControllerHL:
     def get_all_actions(self, actionspace):
         return np.array(list(product(actionspace, repeat=self.horizon)))
     
-    '''
+    '''# Old Vesrion: entire horizon collision check #
     def if_collision(self,s_pred,idx_i,idx_j):
         col_flag = 0
 
@@ -228,60 +221,4 @@ class ControllerHL:
             #print("traj\n",traj[i,:,:])
 
         return traj
-
-    def get_opp_traj(self,s0,act_set):
-        num_traj = act_set.shape[0]
-        traj = np.zeros((num_traj,s0.shape[0],self.horizon))
-        traj[:,:,0] = s0
-
-        for i in range(num_traj):
-            acti = act_set[i,:]
-            
-            # Init
-            opp_car_IsMerging = False
-            opp_car_MergeCount = 0
-
-            # Loop over time horizon
-            for k in range(self.horizon-1):
-                x, y, v, yaw = traj[i,:,k]
-                ### HighWay Follower Dynamics ###
-                act = acti[k]
-
-                # Ego Vehicle Dynamics Prediction
-                # Overwirte Merging Action
-                if act != 3:
-                    if opp_car_IsMerging and opp_car_MergeCount < self.est_opp_car.Merge_Steps.shape[0]:
-                        act = 3
-
-                #print("overwrite: ",k," act:\t",act)
-
-                # Apply Action
-                if act == 0:
-                    u = -1*self.est_opp_car.accel
-                elif act == 1:
-                    u = 0
-                elif act == 2:
-                    u = 1*self.est_opp_car.accel
-                else:
-                    if opp_car_MergeCount == 0:
-                        u = 0
-                        y += self.est_opp_car.Merge_Steps[0]
-                        y = np.clip(y,0,2.5)
-                        opp_car_IsMerging = True
-                        opp_car_MergeCount += 1
-                    elif opp_car_MergeCount < self.est_opp_car.Merge_Steps.shape[0]:
-                        u = 0
-                        y += self.est_opp_car.Merge_Steps[0]
-                        y = np.clip(y,0,2.5)
-                        opp_car_MergeCount += 1
-                    else:
-                        u = 0
-                
-                v = v + u*dt
-                v = np.clip(v,self.est_opp_car.min_v,self.est_opp_car.max_v)
-                x = x + v*dt
-                traj[i,:,k+1] = np.array([x,y,v,yaw])
-
-        return traj
-
 
