@@ -1,13 +1,13 @@
 # Human Leader Controller
 
 import numpy as np
-from itertools import product
 import matplotlib.pyplot as plt
 from controllerEF import ControllerEF
 from car import Car
 
 
 from visualize import *
+from trajectory import *
 
 import copy
 
@@ -21,54 +21,38 @@ GOAL_X = 200
 IsVis = False 
 
 class ControllerHL:
-    def __init__(self,name,horizon):
+    def __init__(self,name,car_my,car_op):
         print("init HL controller")
         self.name = name
-        self.horizon = horizon
+
+        # Link Interacting Cars
+        self.car_my = car_my
+        self.car_op = car_op
+
+        # Obtain horizon
+        self.horizon = self.car_my.horizon
+
+        # Init action
         self.action = None
-        self.action_set = None
-        self.opp_action_set = None
-        
-        self.num_actions = None
-        self.num_opp_actions = None
 
-        self.my_car = None
-        self.opp_car = None
+        # Get action set
+        self.act_set_my = self.car_my.get_all_actions()
+        self.act_set_op = self.car_op.get_all_actions()
 
-        ### Estimated Copy of Opp. Car ###
-        self.est_opp_car = None
+        # Prepare num actions
+        self.num_act_my = self.act_set_my.shape[0]
+        self.num_act_op = self.act_set_op.shape[0]
 
-        ### Helper Data ###
-        self.lane_width = None
+        # Discount Vector
         self.discount = np.zeros(self.horizon)
-
-    def setup(self,my_car,opp_car,lane_width=2.5):
-        print("Set up HL controller")
-        # Opp Car for their States
-        self.my_car = my_car
-        self.opp_car = opp_car
-
-        # action set
-        self.action_set = self.get_all_actions(my_car.actionspace)
-        self.num_actions = self.action_set.shape[0]
-
-        # action set of opponent
-        self.opp_action_set = self.get_all_actions(opp_car.actionspace)
-        self.num_opp_actions = self.opp_action_set.shape[0]
-
-        self.lane_width = lane_width
         for i in range(self.horizon):
             self.discount[i] = pow(0.9,i)
 
 
-    def setup_est_opp_control(self):
-        self.est_opp_car = self.opp_car
-
-
     def select_action(self):
-        opt_actions, opt_traj = self.select_opt_actions()
-        
-        self.action = opt_actions[0]
+        acts_opt, traj_opt = self.select_opt_actions()
+
+        self.action = acts_opt[0]
 
         # random policy
         #self.action = np.random.randint(3)
@@ -76,14 +60,39 @@ class ControllerHL:
         return self.action
 
     def select_opt_actions(self, call_from_ego=False):
-        Qfi = np.zeros(self.num_actions)
+        # Init Qli Matrix
+        Qli = np.zeros(self.num_act_my)
+
+        # Get optimal ego follower traj
+        acts_ego_opt, traj_ego_opt = self.car_op.controller.select_opt_actions()
+#        print("estimate ego follower opt. actions\t",acts_ego_opt)
+
+        # Get human trajectory
+        traj_hum = get_hum_traj(self.car_my.s,
+                                self.act_set_my,
+                                self.car_my.horizon,
+                                self.car_my.dynamics)
+
+        for i in range(self.num_act_my):
+            traj_hum0 = traj_hum[i,:]
+            Qli[i] = self.compute_reward(traj_ego_opt,traj_hum0)
+
+        # argmax Qli
+        traj_opt_idx = np.argmax(Qli)
+        traj_opt = traj_hum[traj_opt_idx,:,:]
+        acts_opt = self.act_set_my[traj_opt_idx,:]
+
+        return acts_opt, traj_opt
+
+        '''
 
         # Obtain optimal ego follower trajectory
-        act_ego_opt, traj_ego_opt = self.est_opp_car.controller.select_opt_actions(call_from_hum=True)
+        # act_ego_opt, traj_ego_opt = self.est_opp_car.controller.select_opt_actions(call_from_hum=True)
+        act_ego_opt, traj_ego_opt = self.opp_car.controller.select_opt_actions(call_from_hum=True)
         print("est_ego_opt actions: ",act_ego_opt)
 
         # Update Est opp car Pos
-        self.est_opp_car.s = copy.deepcopy(self.opp_car.s)
+#        self.est_opp_car.s = copy.deepcopy(self.opp_car.s)
 
         # Predict my trajectories
         traj_hum = self.get_my_traj(self.my_car.s,self.action_set)
@@ -104,7 +113,7 @@ class ControllerHL:
         opt_traj = traj_hum[opt_traj_idx,:,:]
         
         return opt_actions, opt_traj
-
+        '''
 
     def compute_reward(self,traj_ego,traj_hum):
        
@@ -156,11 +165,16 @@ class ControllerHL:
                 col_flag[k] = 1
 
         return col_flag
-
-
+    '''
+    def get_all_actions(self):
+        perm_actions = np.array(list(product(self.car_my.actionspace, repeat=self.horizon)))
+        return perm_actions
+    '''
+    ''' 
     def get_all_actions(self, actionspace):
         return np.array(list(product(actionspace, repeat=self.horizon)))
-    
+    '''
+
     '''# Old Vesrion: entire horizon collision check #
     def if_collision(self,s_pred,idx_i,idx_j):
         col_flag = 0
@@ -190,35 +204,4 @@ class ControllerHL:
         return col_flag
     '''
 
-
-    def get_my_traj(self,s0,act_set):
-        num_traj = act_set.shape[0]
-        traj = np.zeros((num_traj,s0.shape[0],self.horizon))
-        traj[:,:,0] = s0
-
-        for i in range(num_traj):
-            acti = act_set[i,:]
-            for k in range(self.horizon-1):
-                x, y, v, yaw = traj[i,:,k]
-                ### HighWay Follower Dynamics ###
-                act = acti[k]
-                # Decl
-                if act == 0:
-                    u = -1*self.my_car.accel
-                # Cruise
-                elif act == 1:
-                    u = 0
-                # Acel
-                else:
-                    u = 1*self.my_car.accel
-
-                v = v + u*dt
-                v = np.clip(v,self.my_car.min_v,self.my_car.max_v)
-                x = x + v*dt
-                traj[i,:,k+1] = np.array([x,y,v,yaw])
-
-            #print("action\n",acti)
-            #print("traj\n",traj[i,:,:])
-
-        return traj
 

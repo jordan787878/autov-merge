@@ -33,9 +33,9 @@ def ShowAnim(X):
 
 #   print(data)
 
-    ax.set_xlim([0,150])
+    ax.set_xlim([0,200])
     ax.set_ylim([0-0.5*lane_width,2.5+0.5*lane_width])
-    ax.set_xticks(np.linspace(0,150,16))
+    ax.set_xticks(np.linspace(0,200,21))
     scs = []
     colors = ['blue','red','red','red']
 
