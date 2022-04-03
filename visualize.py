@@ -1,5 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.pyplot import cm
+
+def vis_traj(tra,c,ls):
+    fig, ax = plt.subplots()
+    x0, y0 = tra[0,0:2,0]
+    horizon = tra.shape[2]
+    ax.scatter(x0,y0,color=c,linestyle=ls)
+    for i in range(tra.shape[0]):
+        trai = tra[i,0:2,:]
+        ax.plot(trai[0,:],trai[1,:],color=c)
+        ax.scatter(trai[0,horizon-1],trai[1,horizon-1])
+        
+    ax.grid(which='major')
+    plt.show()
+
 
 def vis_Q(Q,title,xticks):
     num_Q = Q.shape[0]
@@ -32,9 +48,9 @@ def vis_Qmatrix(Q,acts_i, acts_j, name):
     num_opp_act = acts_j.shape[0]
 
     Q = np.array(Q).reshape(num_my_act,num_opp_act)
-    
+
     fig, ax = plt.subplots()
-    ax.imshow(Q, cmap = "hot", aspect = "auto")
+    ax.imshow(Q, cmap = "gray", aspect = "auto")
     
     y_ticks = np.arange(num_my_act)
     ax.set_yticks(y_ticks)
