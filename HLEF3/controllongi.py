@@ -12,8 +12,8 @@ class ControlLongi:
         if self.car_lead is not None:
             x_diff = self.car_lead.s[0] - self.car_my.s[0]
             v_diff = self.car_lead.s[2] - self.car_my.s[2]
-            if x_diff <= 15:
-                if v_diff >= 0:
+            if x_diff <= 20:
+                if v_diff >= 5:
                     action = 1
 #                    print(self.car_my.id, "slow to cruise")
                 else:

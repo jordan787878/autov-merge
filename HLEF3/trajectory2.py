@@ -3,7 +3,7 @@ import numpy as np
 ### Global ###
 dt = 1.0 
 
-def get_traj_ego(s0,act_set,horizon,merge_steps,lane_width,dynamics):
+def get_traj_ego(s0,act_set,horizon,merge_steps,lane_width,dynamics,tstep=dt):
 
 #    print("get traj ego()")
 
@@ -13,7 +13,7 @@ def get_traj_ego(s0,act_set,horizon,merge_steps,lane_width,dynamics):
     v_max = dynamics['v_max']
 
     # Init Traj
-    traj = np.zeros((num_traj,s0.shape[0],horizon))
+    traj = np.zeros((num_traj,s0.shape[0],horizon+1))
     traj[:,:,0] = s0
 
     for i in range(num_traj):
@@ -24,7 +24,7 @@ def get_traj_ego(s0,act_set,horizon,merge_steps,lane_width,dynamics):
         MergeCount = 0
 
         # Loop over Time Horizon
-        for k in range(horizon-1):
+        for k in range(horizon):
             x0, y0, v0, yaw0 = traj[i,:,k]
             act = acts_i[k]
 
@@ -65,8 +65,9 @@ def get_traj_ego(s0,act_set,horizon,merge_steps,lane_width,dynamics):
             v = v0 + u*dt
             v = np.clip(v,v_min,v_max)
             #x = x0 + v0*dt
-            # 0410
-            x = x0 + v0*dt + 0.5*u*dt*dt
+            if v0 >= v_max or v0 <= v_min: #0411
+                u = 0
+            x = x0 + v0*dt + 0.5*u*dt*dt #0410
             y = np.clip(y,0,lane_width)
             yaw = yaw0
             traj[i,:,k+1] = np.array([x,y,v,yaw])
@@ -75,7 +76,7 @@ def get_traj_ego(s0,act_set,horizon,merge_steps,lane_width,dynamics):
 
 
 
-def get_hum_traj(s0,act_set,horizon,dynamics):
+def get_hum_traj(s0,act_set,horizon,dynamics,tstep=dt):
 #    print("get hum traj()")
 
     num_traj = act_set.shape[0]
@@ -84,12 +85,12 @@ def get_hum_traj(s0,act_set,horizon,dynamics):
     v_max = dynamics['v_max']
 
     # Init Traj
-    traj = np.zeros((num_traj,s0.shape[0],horizon))
+    traj = np.zeros((num_traj,s0.shape[0],horizon+1))
     traj[:,:,0] = s0
 
     for i in range(num_traj):
         acts_i = act_set[i,:]
-        for k in range(horizon-1):
+        for k in range(horizon):
             # Get current states
             x0, y0, v0, yaw0 = traj[i,:,k]
             # Get current action
@@ -107,8 +108,9 @@ def get_hum_traj(s0,act_set,horizon,dynamics):
             v = v0 + u*dt
             v = np.clip(v,v_min,v_max)
             #x = x + v*dt
-            # 0410
-            x = x0 + v0*dt + 0.5*u*dt*dt
+            if v0 >= v_max or v0 <= v_min: #0411
+                u = 0
+            x = x0 + v0*dt + 0.5*u*dt*dt #0410
             traj[i,:,k+1] = np.array([x,y0,v,yaw0])
 
     return traj

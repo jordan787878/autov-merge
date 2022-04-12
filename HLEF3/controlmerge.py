@@ -3,7 +3,7 @@ from trajectory2 import *
 from visual2 import *
 
 #############################
-MERGE_SAFE_DIST = 10
+MERGE_SAFE_DIST = 15
 MERGE_START_X = 25
 MERGE_END_X = 175
 GOAL_X = 200
@@ -55,24 +55,25 @@ class ControlMerge:
         for i in range(self.horizon):
             self.discount[i] = pow(0.9,i)
 
+        # Helper 
+        self.count = 0
+
 
     def select_action(self):
-        print("ego selecting action")
-
+        print("### ego select actions ###")
+        
         acts_opt = self.select_opt_actions()
 
         self.action = acts_opt[0]
 
         # Continue Mergine Step
         if self.car_my.IsMerging and self.car_my.MergeCount < self.car_my.merge_steps:
-#            print("controllerMerge overwrite to continue merging")
             self.action = 3
 
         return self.action
 
 
     def select_opt_actions(self):
-
 #        print("Estimate hum1 car states:\t", self.car_h1_obs.s)
         
         # Get Human1 Opt Action and Traj
@@ -82,6 +83,10 @@ class ControlMerge:
         # Get Human2 Opt Action and Traj
         acts_opt_h2, traj_opt_h2 = self.car_h2_obs.controller.select_opt_actions(True,self.car_my.s)
         #print("Estimate hum1 follower opt actions: ", acts_opt_h1)
+
+        # Print
+        print("human1 est opt action: ",acts_opt_h1)
+        print("human2 est opt action: ",acts_opt_h2)
 
         # Get Ego Trajectory
         traj_ego = get_traj_ego(self.car_my.s,
@@ -108,6 +113,7 @@ class ControlMerge:
         #print('Esitmate hum2 follower states: ',self.car_h2_obs.s)
         self.car_h2_obs.s = copy.deepcopy(self.car_h2_abs.s)
 
+        print("ego   merge    action: ",acts_opt)
 
         return acts_opt
 
@@ -128,23 +134,19 @@ class ControlMerge:
 
             # Ego Merge Check
             if traj_ego_i[0,-1] >= MERGE_END_X and traj_ego_i[1,-1] < 0.4:
-                cost_total[i] = 100
+                cost_total[i] = 10000
 #                print("merge fail at act:\t",i)
 
 
             ###################################################################
             # Interation with Human 1 (Follower)
-            s_bar = np.hstack((traj_ego_i.T,traj_h1.T))
-            
-            cost_coli = self.if_collision(s_bar) * 50
+            cost_coli = self.if_collision(traj_ego_i,traj_h1) * 50
 
             cost_coli_hum1[i] = cost_coli.sum()
 
             ###################################################################
             # Interation with Human 2 (Follower)
-            s_bar = np.hstack((traj_ego_i.T,traj_h2.T))
-
-            cost_coli = self.if_collision(s_bar) * 50 
+            cost_coli = self.if_collision(traj_ego_i,traj_h2) * 50 
 
             cost_coli_hum2[i] = cost_coli.sum()
 
@@ -153,14 +155,16 @@ class ControlMerge:
             cost_merge_vector = -1*(traj_ego_i[0,:] - GOAL_X)/(GOAL_X) \
                                 -50*(traj_ego_i[1,:] - self.car_my.lane_width)/(self.car_my.lane_width)
             
+
             cost_merge[i] = cost_merge_vector.sum()
             ''' 
             print("act:",self.act_set_my[i])
             print("ego traj:\n", traj_ego_i[0:2,:])
             print("merge cost vector: ",cost_merge_vector)
-            print("merge cost: {:3.2f} total cost: {:3.2f}".format(cost_merge[i],cost_total[i]))
+            print("merge cost: {:3.2f} coli cost: {:3.2f}".format(cost_merge[i],cost_coli_hum1[i]))
             print("\n")
             '''
+            
         
         #######################################################################
         ### 1. Collision Cost ###
@@ -174,33 +178,51 @@ class ControlMerge:
         ### Print Costs ###
         ''' 
         for i in range(self.num_act_my):
-            print("act:",self.act_set_my[i]
-            print("ego traj:\n", traj_eg[i,0:2,:])
-            print("merge cost: {:3.2f} total cost: {:3.2f}".format(cost_merge[i],cost_total[i]))
-            print("\n")
-        '''
-        #vis_ego_cost(cost_merge, cost_coli_sum, cost_total, 'ego cost', self.act_set_my) 
-        ###################
 
+            print("act:",self.act_set_my[i])
+            print("ego traj:\n", traj_eg[i,0:3,:])
+            print("hum traj:\n", traj_h1[0:3,:])
+            print("x diff:\n", traj_eg[i,0,:] - traj_h1[0,:])
+            print("y diff:\n", traj_eg[i,1,:] - traj_h1[1,:])
+            print("merge cost: {:3.2f} coli cost: {:3.2f}".format(cost_merge[i],cost_coli_sum[i]))
+            print("\n")
+        ''' 
+#        vis_ego_cost(cost_merge, cost_coli_sum, cost_total, 'ego cost', self.act_set_my) 
+        ###################
+        
         return cost_total
 
+    def if_collision(self,traj_ego,traj_hum,verbose=False):
+        col_flag = np.zeros(self.horizon+1)
 
-    def if_collision(self,s_pred):
-        col_flag = np.zeros(self.horizon)
-
-        x_ego = s_pred[:,0]
-        y_ego = s_pred[:,1]
-        x_other = s_pred[:,4]
-        y_other = s_pred[:,5]
+        x_ego = traj_ego[0,:]
+        y_ego = traj_ego[1,:]
+        x_other = traj_hum[0,:]
+        y_other = traj_hum[1,:]
 
         x_diff = (x_ego-x_other)
         y_diff = (y_ego-y_other)
 
-        for k in range(self.horizon):
-            if abs(x_diff[k]) >= MERGE_SAFE_DIST or abs(y_diff[k]) > 2.4:
+        if verbose:
+            print(x_ego,x_other)
+            print(y_ego,y_other)
+
+        for k in range(1,self.horizon+1):
+            '''
+            if abs(x_diff[k]) >= MERGE_SAFE_DIST or abs(y_diff[k]) >= 2.4:
                 col_flag[k] = 0
             else:
                 col_flag[k] = 1
+            '''
+            if abs(x_diff[k]) <= MERGE_SAFE_DIST and abs(y_diff[k]) < self.car_my.lane_width:
+                col_flag[k] = 1
+            else:
+                col_flag[k] = 0
+
+        # TEST Collision Flog over Entire Horizon
+        if col_flag.any() == 1:
+            col_flag = np.ones(self.horizon+1)
+
 
         return col_flag
 

@@ -21,7 +21,7 @@ class CarVer2:
 
         # Helper
         self.lane_width = None
-        self.timer = 0
+        self.count = 0
 
         # Longi Controller in Same lane
         self.controller_longi = None
@@ -49,6 +49,9 @@ class CarVer2:
                 if perm_actions[i,j] == 3:
                     perm_actions[i,j+1:self.horizon] = 3
                     break
+
+#        for i in range(num_acts):
+#            print(i,perm_actions[i])
                 
 
         #print(perm_actions)
@@ -57,10 +60,13 @@ class CarVer2:
 
     def update(self,dt):
         # Merging Controller
-        self.car_action = self.controller.select_action()
+        if self.count % 1 == 0:
+            self.car_action = self.controller.select_action()
+            self.car_action = self.controller_longi.select_action(self.car_action)
+        self.count += 1
 
         # Longi Controller in same lane
-        self.car_action = self.controller_longi.select_action(self.car_action)
+        # self.car_action = self.controller_longi.select_action(self.car_action)
 
         action = self.car_action
 

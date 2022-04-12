@@ -6,9 +6,9 @@ from visual2 import *
 
 ##############################
 # For Merging Behavior Reward
-GOAL_X = 200
+GOAL_X = 300
 # For Collision Detect
-MERGE_SAFE_DIST = 3
+MERGE_SAFE_DIST = 15
 ##############################
 
 
@@ -41,17 +41,17 @@ class ControlHumanLead:
         self.num_act_op = self.act_set_op.shape[0]
 
         # Discount Vector
-        self.discount = np.zeros(self.horizon)
-        for i in range(self.horizon):
+        self.discount = np.zeros(self.horizon+1)
+        for i in range(self.horizon+1):
             self.discount[i] = pow(0.9,i)
 
     ##################################################
     def select_action(self):
-        #print("human lead ego states: ",self.car_op.s)
+        print("### human leader select actions ###")
 
         acts_opt, traj_opt = self.select_opt_actions(False, None)
 
-#        print("human lead opt action: ",acts_opt)
+        print("human leader   action: ",acts_opt)
 
         self.action = acts_opt[0]
 
@@ -62,95 +62,152 @@ class ControlHumanLead:
 
     ###################################################
     def select_opt_actions(self, call_from_ego, actual_state):
+        if call_from_ego:
+            self.car_op.s = copy.deepcopy(actual_state)
+
         # Get human trajectory
-        traj_hum = get_hum_traj(self.car_my.s,
-                                self.act_set_my,
-                                self.car_my.horizon,
-                                self.car_my.dynamics)
+        traj_hum = get_hum_traj(self.car_my.s,self.act_set_my,self.car_my.horizon,self.car_my.dynamics)
         # Get Ego Traj
-        traj_ego = get_traj_ego(self.car_op.s,
-                                self.act_set_op,
-                                self.car_op.horizon,
-                                self.car_op.merge_steps,
-                                self.car_op.lane_width,
-                                self.car_op.dynamics)
+        traj_ego = get_traj_ego(self.car_op.s,self.act_set_op,self.car_op.horizon,
+                                self.car_op.merge_steps,self.car_op.lane_width,self.car_op.dynamics)
 
-        # Init Qli Matrix
-        Ql = np.zeros((self.num_act_my,self.num_act_op))
-        Qli = np.zeros(self.num_act_my)
+        # Init Qf Matrix
+        Qfi = self.compute_Qf(traj_ego, traj_hum, call_from_ego)
+        traj_ego_opt_idx = np.argmax(Qfi)
+        traj_ego_opt = traj_ego[traj_ego_opt_idx,:,:]
+        acts_ego_opt = self.act_set_op[traj_ego_opt_idx,:]
+        print("ego   follower action: ", acts_ego_opt)
+#        vis_hum_lead(Qfi, "ego follower Qfi", self.act_set_op)
 
-        # Compute Ql Matrix
-        for i in range(self.num_act_my):
-            traj_hum0 = traj_hum[i,:]
-            for j in range(self.num_act_op):
-                traj_ego0 = traj_ego[j,:]
-                Ql[i,j] = self.compute_reward(traj_ego0,traj_hum0)
-            Qli[i] = np.min(Ql[i,:])
+        # Init Ql matrix
+        Ql = np.zeros(traj_hum.shape[0])
+        for i in range(traj_hum.shape[0]):
+            Ql[i] = self.compute_reward(traj_ego_opt, traj_hum[i])
 
+#            print(i,self.act_set_my[i],Ql[i])
 
-#        vis_Qmatrix(Qf, self.act_set_my, self.act_set_op, "human2 follower Qf")
-#        vis_Qmatrix(Qfi, self.act_set_my, np.array([1]), "human2 follower Qfi")
-
-        # Max Qf
-        traj_opt_idx = np.argmax(Qli)
+        traj_opt_idx = np.argmax(Ql)
         traj_opt = traj_hum[traj_opt_idx,:,:]
         acts_opt = self.act_set_my[traj_opt_idx,:]
-
-
-        acts_opt = self.act_set_my[-1];
-        traj_opt = traj_hum[-1]
+#        print(traj_opt_idx, acts_opt)
+#        if call_from_ego == False:
+#            vis_hum_lead(Ql,"human leader Ql",self.act_set_my)
 
         return acts_opt, traj_opt
 
-    #######################################################
-    def compute_reward(self,traj_ego,traj_hum):
 
-        s_pred = np.hstack((traj_ego.T,traj_hum.T))
+    ##################################################
+    def compute_Qf(self, traj_ego, traj_hum, call_from_ego):
+        Qf = np.zeros((traj_ego.shape[0],traj_hum.shape[0]))
+        Qfi = np.zeros(traj_ego.shape[0])
 
-        ##### Highway Leader #####
+#        print(call_from_ego,traj_ego[0,0,:])
+#        print(call_from_ego,traj_hum[0,1,:])
+        for i in range(traj_ego.shape[0]):
+            for j in range(traj_hum.shape[0]):
+                Qf[i,j] = self.compute_ego_reward(traj_ego[i],traj_hum[j])
+            Qfi[i] = np.min(Qf[i,:])
+            #print(Qfi[i],end= ' ')
+        #print(call_from_ego)
+#            print(i,self.act_set_op[i],Qfi[i])
+        
+        ### Test ###
+#        vis_ego_follow(Qfi,"ego follower Qfi",self.act_set_op)
+        
+        return Qfi
+
+    def compute_ego_reward(self, traj_ego, traj_hum):
         # Init
-        R_distance = np.zeros(s_pred.shape[0])
-        R_collision = -1000
+        R_distance = np.zeros(traj_ego.shape[1])
+        R_collision = -100
         R = 0
 
         ###### Collision Reward ##### (entire horizon)
-        R_collision = self.if_collision(s_pred)*R_collision
+        R_collision = self.if_collision(traj_ego,traj_hum)*R_collision
 
         ##### Distance Reward #####
         goal = GOAL_X
 
-        # Distance Reward for each step
-        R_distance = -abs(s_pred[:,4] - goal) 
+        # Normalized Distance Reward for each step, (min: -1, max: 0)
+        
+        #R_distance = -abs(traj_hum[0,:] - goal)/(goal)
+        for k in range(traj_ego.shape[1]):
+            x_ego = traj_ego[0,k]
+            y_ego = traj_ego[1,k]
+            if x_ego >= 25 and x_ego <= 175 and y_ego < 0.5:
+                R_distance[k] = -abs(x_ego-goal)/goal -10*abs(y_ego-2.5)/2.5
+            else:
+                R_distance[k] = -abs(x_ego-goal)/goal
+            if x_ego >= 100 and y_ego < 0.5:
+                R_distance[k] = -100
 
-        # Reward
-        #R = R_distance + R_collision
         R = np.minimum(R_distance, R_collision)
 
-        # Discount factor for each step
         R = R*self.discount
 
-        # Cumulative reward over entire horizon
+        R = R.sum()
+
+        return R
+    
+    #######################################################
+    def compute_reward(self,traj_ego,traj_hum):
+        # Init
+        R_distance = np.zeros(traj_ego.shape[1])
+        R_collision = -100
+        R = 0
+
+        ###### Collision Reward ##### (entire horizon)
+        R_collision = self.if_collision(traj_ego,traj_hum)*R_collision
+
+        ##### Distance Reward #####
+        goal = GOAL_X
+
+        # Normalized Distance Reward for each step, (min: -1, max: 0)
+        R_distance = -abs(traj_hum[0,:] - goal)/(goal)
+
+        x_ego = traj_ego[0,:]
+        y_ego = traj_ego[1,:]
+        x_other = traj_hum[0,:]
+        y_other = traj_hum[1,:]
+
+        x_diff = (x_ego-x_other)
+        y_diff = (y_ego-y_other)
+#        print(x_ego,' ', y_ego)
+#        print(x_diff, ' ', y_diff, ' ', R_collision)
+#        print("\n")
+
+        R = np.minimum(R_distance, R_collision)
+
+        R = R*self.discount
+
         R = R.sum()
 
         return R
 
-    #######################################################
-    def if_collision(self,s_pred):
-        col_flag = np.zeros(self.horizon)
 
-        x_ego = s_pred[:,0]
-        y_ego = s_pred[:,1]
-        x_other = s_pred[:,4]
-        y_other = s_pred[:,5]
+
+    #######################################################
+    def if_collision(self,traj_ego,traj_hum):
+        col_flag = np.zeros(self.horizon+1)
+
+        x_ego = traj_ego[0,:]
+        y_ego = traj_ego[1,:]
+        x_other = traj_hum[0,:]
+        y_other = traj_hum[1,:]
 
         x_diff = (x_ego-x_other)
         y_diff = (y_ego-y_other)
 
-        for k in range(self.horizon):
-            if abs(x_diff[k]) >= MERGE_SAFE_DIST or abs(y_diff[k]) > 1.0:
-                col_flag[k] = 0
-            else:
+        for k in range(1,self.horizon+1):
+            if abs(x_diff[k]) <= MERGE_SAFE_DIST and abs(y_diff[k]) < self.car_my.lane_width:
                 col_flag[k] = 1
+            else:
+                col_flag[k] = 0
+
+        # TEST Collision Flog over Entire Horizon
+        if col_flag.any() == 1:
+            col_flag = np.ones(self.horizon+1)
+
 
         return col_flag
 

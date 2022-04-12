@@ -14,12 +14,12 @@ LABEL = "0410_Merge_Test"
 
 ### Setup ###
 dt = 0.1
-V0 = 28
+V0 = 24
 HORIZON = 4 
 LANE_WIDTH = 2.5
 NUM_CARS = 3
 GOAL_X = 200
-dynamics = {"v_min":22,"v_max":33 ,"accel":3.5} # 18, 30, 3
+dynamics = {"v_min":18,"v_max":30 ,"accel":3} # 18, 30, 3
 aspace_highway = np.array([0,1,2])
 aspace_merge   = np.array([0,1,2,3])
 
@@ -27,12 +27,12 @@ aspace_merge   = np.array([0,1,2,3])
 EXTEND = 10
 
 ### Init X ###
-x0_h1 = np.random.randint(0,25)
-#x0_h1 = 0 
-x0_h2 = np.random.randint(25,50)
-#x0_h2 = 20 
-x0_e =  np.random.randint(0,50)
-#x0_e = 30
+x0_h2 = np.random.randint(0,30)
+#x0_h1 = 0
+x0_h1 = x0_h2 + np.random.randint(10,40)
+#x0_h2 = 40 
+x0_e =  np.random.randint(0,x0_h1+30)
+#x0_e =  18 
 
 def main():
     print("import")
@@ -133,7 +133,7 @@ def main():
         ego.update(dt)
         i += 1
 
-        a_log = "a (e,h1,h2) {:3d} {:3d} {:3d}".format(ego.car_action, hum1.car_action,hum2.car_action)
+        a_log = "=== action (e,h1,h2) {:3d}{:3d}{:3d} ===".format(ego.car_action, hum1.car_action,hum2.car_action)
         print(a_log)
 
     states = np.array(states)
@@ -147,6 +147,7 @@ def main():
             "lane_width":LANE_WIDTH,
             "horizon":HORIZON,
             "states":states,
+            "actions":actions,
             "dt":dt,
             "x0":x0,
             "car_dynamics":car_dynamics,}

@@ -27,6 +27,48 @@ def vis_traj(tra1,tra2):
     ax.grid(which='major')
     plt.show()
 
+def vis_tra1_tra2(tra1,tra2):
+    print(tra1.shape)
+    print(tra2.shape)
+
+    # init figure
+    fig, ax = plt.subplots()
+
+    color = ['black','r','g','b','y']
+    for k in range(tra1.shape[2]):
+        traj_k = tra1[:,:,k]
+        ax.scatter(traj_k[0,0],traj_k[0,1]+0.1,c=color[k])
+        ax.scatter(traj_k[-1,0],traj_k[-1,1]-0.1,c=color[k])
+
+    for k in range(tra2.shape[2]):
+        traj_k = tra2[:,:,k]
+        ax.scatter(traj_k[0,0],traj_k[0,1],c=color[k])
+        ax.scatter(traj_k[-1,0],traj_k[-1,1],c=color[k])
+        ax.scatter(traj_k[11,0],traj_k[11,1],c=color[k])
+        ax.scatter(traj_k[12,0],traj_k[12,1],c=color[k])
+        ax.scatter(traj_k[27,0],traj_k[27,1],c=color[k])
+        ax.scatter(traj_k[48,0],traj_k[48,1],c=color[k])
+        ax.scatter(traj_k[122,0],traj_k[122,1],c=color[k])
+        ax.scatter(traj_k[176,0],traj_k[176,1],c=color[k])
+        #traj_k = tra2[:,:,k:k+2]
+        #ax.plot(traj_k[0,0,:],traj_k[0,1,:],c=color[k],marker='o')
+        #ax.plot(traj_k[-1,0,:],traj_k[-1,1,:],c=color[k],marker='o')
+        #ax.plot(traj_k[11,0,:],traj_k[11,1,:],c=color[k],marker='o')
+        #ax.plot(traj_k[12,0,:],traj_k[12,1,:],c=color[k],marker='o')
+        #ax.plot(traj_k[27,0,:],traj_k[27,1,:],c=color[k],marker='o')
+        #ax.plot(traj_k[45,0,:],traj_k[48,1,:],c=color[k],marker='o')
+        #ax.plot(traj_k[122,0,:],traj_k[122,1,:],c=color[k],marker='o')
+        #ax.plot(traj_k[176,0,:],traj_k[176,1,:],c=color[k],marker='o')
+
+
+    plt.xticks(np.arange(150),fontsize = 4)
+    plt.grid()
+
+
+    plt.show()
+
+
+
 
 def plot_Q(Q,title,xticks):
     num_Q = Q.shape[0]
@@ -53,28 +95,100 @@ def plot_Q(Q,title,xticks):
     #plt.pause(0.7)
     #plt.close()
 
+def vis_ego_follow(Qfi,title,xticks):
+    scale = 5 
+
+    num_Q = Qfi.shape[0]
+    x = np.arange(0,num_Q)
+    x = scale*x
+    
+    fig, ax = plt.subplots(figsize=(10,10))
+    ax.plot(x,Qfi,'r')
+    
+    x_max = np.argmax(Qfi)
+    cost_max = np.max(Qfi)
+    opt_act = xticks[x_max]
+    ax.scatter(scale*x_max,cost_max)
+
+    ax.set_aspect('auto')
+    plt.title(title+str(opt_act))
+
+    colors = ['r','g','b','y']
+    for i in range(xticks.shape[0]):
+        act0 = xticks[i]
+        act0_x = [scale*i,scale*i,scale*i,scale*i]
+        act0_y = [-700,-680,-660,-640]
+        ax.scatter(act0_x,act0_y,c=[colors[act0[0]],colors[act0[1]],colors[act0[2]],colors[act0[3]]])
+
+    fig.tight_layout()
+    plt.tick_params(labelbottom = False, bottom = False)
+    plt.show()
+
+def vis_hum_lead(Qfi,title,xticks):
+    scale = 5
+
+    num_Q = Qfi.shape[0]
+    x = np.arange(0,num_Q)
+    x = scale*x
+
+    fig, (ax1, ax2) = plt.subplots(2,1,figsize=(10,10))
+    ax1.plot(x,Qfi,'r')
+
+    x_max = np.argmax(Qfi)
+    cost_max = np.max(Qfi)
+    opt_act = xticks[x_max]
+    ax1.scatter(scale*x_max,cost_max)
+
+    #ax1.set_aspect('auto')
+    plt.suptitle(title+str(opt_act))
+
+    colors = ['r','g','b','y']
+    for i in range(xticks.shape[0]):
+        act0 = xticks[i]
+        act0_x = [scale*i,scale*i,scale*i,scale*i]
+        act0_y = [0,1,2,3]
+        ax2.scatter(act0_x,act0_y,c=[colors[act0[0]],colors[act0[1]],colors[act0[2]],colors[act0[3]]])
+
+    fig.tight_layout()
+    plt.tick_params(labelbottom = False, bottom = False)
+    plt.show()
+
+
+
+
 def vis_ego_cost(Q_merge,Q_coli,Q_total,title,xticks):
+    scale = 5 
+
     num_Q = Q_merge.shape[0]
-    x = np.arange(0,num_Q) + 1
+    x = np.arange(0,num_Q)
+    x = scale*x
     
     fig, ax = plt.subplots(figsize=(10,10))
     ax.plot(x,Q_merge,'r')
     ax.plot(x,Q_coli,'g')
     ax.plot(x,Q_total,'b')
+    
     x_min = np.argmin(Q_total)
     cost_min = np.min(Q_total)
     opt_act = xticks[x_min]
-    ax.scatter(x_min,cost_min)
+    ax.scatter(scale*x_min,cost_min)
 
     ax.set_aspect('auto')
     plt.title(title+str(opt_act))
-    labels = np.array([str(xx) for xx in xticks])
-    plt.xticks(x, labels, rotation = 'vertical',fontsize = 5)
-    
+
+    colors = ['r','g','b','y']
+    for i in range(xticks.shape[0]):
+        act0 = xticks[i]
+        act0_x = [scale*i,scale*i,scale*i,scale*i]
+        act0_y = [-70,-50,-30,-10]
+        ax.scatter(act0_x,act0_y,c=[colors[act0[0]],colors[act0[1]],colors[act0[2]],colors[act0[3]]])
+
+    #labels = np.array([str(xx) for xx in xticks])
+    #plt.xticks(x, labels, rotation = 'vertical',fontsize = 5)
 
     fig.tight_layout()
     # Adjust more bottom space
-    plt.subplots_adjust(bottom = 0.15)
+    plt.tick_params(labelbottom = False, bottom = False)
     # Show and close figure auto. 1 sec
     plt.show()
     #plt.show(block=False)
