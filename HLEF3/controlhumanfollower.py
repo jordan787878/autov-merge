@@ -46,7 +46,7 @@ class ControlHumanFoll:
 
     ##################################################
     def select_action(self):
-        print("### human followe select actions ###")
+        print("### human follower select actions ###")
 
         acts_opt, traj_opt = self.select_opt_actions(False, None)
 

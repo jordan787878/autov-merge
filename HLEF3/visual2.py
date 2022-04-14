@@ -163,25 +163,25 @@ def vis_ego_cost(Q_merge,Q_coli,Q_total,title,xticks):
     x = np.arange(0,num_Q)
     x = scale*x
     
-    fig, ax = plt.subplots(figsize=(10,10))
+    fig, (ax,ax1,ax2,ax3) = plt.subplots(4,1,figsize=(10,10))
     ax.plot(x,Q_merge,'r')
-    ax.plot(x,Q_coli,'g')
-    ax.plot(x,Q_total,'b')
+    ax1.plot(x,Q_coli,'g')
+    ax2.plot(x,Q_total,'b')
     
     x_min = np.argmin(Q_total)
     cost_min = np.min(Q_total)
     opt_act = xticks[x_min]
-    ax.scatter(scale*x_min,cost_min)
+    ax2.scatter(scale*x_min,cost_min)
 
     ax.set_aspect('auto')
-    plt.title(title+str(opt_act))
+    plt.suptitle(title+str(opt_act))
 
     colors = ['r','g','b','y']
     for i in range(xticks.shape[0]):
         act0 = xticks[i]
         act0_x = [scale*i,scale*i,scale*i,scale*i]
         act0_y = [-70,-50,-30,-10]
-        ax.scatter(act0_x,act0_y,c=[colors[act0[0]],colors[act0[1]],colors[act0[2]],colors[act0[3]]])
+        ax3.scatter(act0_x,act0_y,c=[colors[act0[0]],colors[act0[1]],colors[act0[2]],colors[act0[3]]])
 
     #labels = np.array([str(xx) for xx in xticks])
     #plt.xticks(x, labels, rotation = 'vertical',fontsize = 5)
@@ -252,6 +252,30 @@ def vis_collision_reward(x_diff,y_diff,act_hf,act_el,flag):
     '''
     if np.array_equal(act_hf, np.array([2,2,2])):
         plt.show()
+
+def vis_actions(acts):
+    colors = ['r','g','b','y']
+    num_cars = acts.shape[1]
+    time = acts.shape[0]
+    fig, axs = plt.subplots(num_cars, 1, figsize=(7,7))
+    for k in range(time):
+        for i in range(num_cars):
+            axs[i].scatter(k,acts[k,i],c=colors[acts[k,i]])
+    plt.suptitle('actions')
+    plt.show()
+
+def vis_xdiff(states):
+    num_hum_cars = int(states.shape[1]/4)-1
+    x_ego = states[:,0]
+    time = np.arange(states.shape[0])
+    fig, axs = plt.subplots(num_hum_cars, 1, figsize = (7,7))
+    for i in range(num_hum_cars):
+        x_hum = states[:,4*(i+1)]
+        x_diff = abs(x_ego-x_hum)
+        axs[i].plot(time,x_diff)
+    plt.suptitle('delta x between ego and human vehicles')
+    plt.show()
+        
 
 def main():
     Q = np.array([1,2,3])
