@@ -97,13 +97,13 @@ class CarVer2:
                 y += self.lane_width/self.merge_steps
                 self.IsMerging = True
                 self.MergeCount += 1
-                print("***** MERGE *****")
+#                print("***** MERGE *****")
 
             elif self.MergeCount < self.merge_steps:
                 u = 0
                 y += self.lane_width/self.merge_steps
                 self.MergeCount += 1
-                print("***** MERGE *****")
+#                print("***** MERGE *****")
             else:
                 u = 0
 

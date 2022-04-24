@@ -13,7 +13,7 @@ MERGE_SAFE_DIST = 15
 
 class ControlHumanFoll:
     def __init__(self,car_my,car_ego,name):
-        print("init human follower controller")
+#        print("init human follower controller")
         self.name = name
 
         # Link My Car
@@ -37,7 +37,7 @@ class ControlHumanFoll:
         # Prepare num actions
         self.num_act_my = self.act_set_my.shape[0]
         self.num_act_op = self.act_set_op.shape[0]
-        print(self.num_act_op)
+#        print(self.num_act_op)
 
         # Discount Vector
         self.discount = np.zeros(self.horizon+1)
@@ -46,13 +46,13 @@ class ControlHumanFoll:
 
     ##################################################
     def select_action(self):
-        print("### human follower select actions ###")
+#        print("### human follower select actions ###")
 
         acts_opt, traj_opt = self.select_opt_actions(False, None)
 
         self.action = acts_opt[0]
 
-        print("human follower action: ",acts_opt)
+#        print("human follower action: ",acts_opt)
 
         # random policy
         #self.action = np.random.randint(3)

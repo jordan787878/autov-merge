@@ -8,10 +8,12 @@ from car2 import CarVer2
 import numpy as np
 from anim import ShowAnim
 
+NUM_SIMU = 300
+
 ### Data Setup ###
 OUTPUT_DIR = '../output/task5/'
 DATA_NAME = 'data1.txt'
-LABEL = "0412_Triple_Test"
+LABEL = "0413_Triple_Test"
 
 ### Setup ###
 dt = 0.1
@@ -27,23 +29,22 @@ aspace_merge   = np.array([0,1,2,3])
 ### Helper ###
 EXTEND = 10
 
-### Init X ###
-x0_h1 = np.random.randint(0,10)
-#x0_h1 = 2 
-x0_h2 = np.random.randint(15,25)
-#x0_h2 = 20 
-x0_h3 = np.random.randint(30,40)
-#x0_h3 = 32 
-x0_e =  np.random.randint(5,35)
-#x0_e = 0 
+def simulation():
+    ### Init X ###
+    x0_h1 = np.random.randint(0,10)
+    #x0_h1 = 2
+    x0_h2 = np.random.randint(15,25)
+    #x0_h2 = 20
+    x0_h3 = np.random.randint(30,40)
+    #x0_h3 = 32
+    x0_e =  np.random.randint(5,35)
+    #x0_e = 0
 
-def main():
-    print("import")
 
     # Random Choose Highway Label
     LF_labels = np.random.randint(2, size = 3)
 #    LF_labels = [1,0,1]
-    print("L/F Labels: ",LF_labels)
+    #print("L/F Labels: ",LF_labels)
 
     # Init Car
     s_h1 = np.array([x0_h1,LANE_WIDTH,V0,0])
@@ -118,7 +119,8 @@ def main():
 ###########################################################################
 
     ### Env ###
-    merge_done = False
+    simu_done = False
+    merge_success = False
     simu_count = 0
     i = 1
     dt = 0.1
@@ -127,29 +129,31 @@ def main():
     states = []
     actions = []
     x0 = np.array([x0_e,x0_h1,x0_h2,x0_h3])
-    print("initial x0 (e,h1,h2,h3): ",x0)
+    #print("initial x0 (e,h1,h2,h3): ",x0)
 
     ### Car Dynamics Info ###
     # Uniform Car Dynamics now
     car_dynamics = ego.dynamics
 
     ### Simulation ###
-    while merge_done == False or simu_count <= EXTEND:
+    while simu_done == False or simu_count <= EXTEND:
         if abs(ego.s[1] - LANE_WIDTH) < 0.01 or ego.s[0] > GOAL_X:
-            merge_done = True
-        if merge_done:
-            print("extend count")
+            simu_done = True
+            if abs(ego.s[1] - LANE_WIDTH) < 0.01:
+                merge_success = True
+        if simu_done:
+            #print("extend count")
             simu_count += 1
 
-        print("\n===== Step: ",i," =====")
+        #print("\n===== Step: ",i," =====")
         states.append(np.hstack((ego.s,hum1.s,hum2.s,hum3.s)))
         actions.append(np.hstack((ego.car_action,hum1.car_action,hum2.car_action,hum3.car_action)))
         x_log = "x (e,h1,h2,h3) {:3.1f} {:3.1f} {:3.1f} {:3.1f}".format(ego.s[0],hum1.s[0],hum2.s[0],hum3.s[0])
-        print(x_log)
+        #print(x_log)
         v_log = "v (e,h1,h2,h3) {:3.1f} {:3.1f} {:3.1f} {:3.1f}".format(ego.s[2],hum1.s[2],hum2.s[2],hum3.s[2])
-        print(v_log)
+        #print(v_log)
         y_log = "y (e,h1,h2,h3) {:3.1f} {:3.1f} {:3.1f} {:3.1f}".format(ego.s[1],hum1.s[1],hum2.s[1],hum3.s[1])
-        print(y_log)
+        #print(y_log)
 
         hum1.update(dt)
         hum2.update(dt)
@@ -158,12 +162,12 @@ def main():
         i += 1
 
         a_log = "=== action (e,h1,h2,h3) {:3d}{:3d}{:3d}{:3d} ===".format(ego.car_action, hum1.car_action,hum2.car_action, hum3.car_action)
-        print(a_log)
+        #print(a_log)
 
     states = np.array(states)
     actions = np.array(actions).reshape(-1,NUM_CARS)
-    print("Simu Done")
-    print("Merge: ",merge_done)
+    #print("Simu Done")
+    #print("Merge: ",simu_done)
  
     
     ### Save Data ###
@@ -179,15 +183,15 @@ def main():
             "car_dynamics":car_dynamics,}
 
 
-    save_path = OUTPUT_DIR + LABEL + '_' + str(x0)+'.npy'
+    save_path = OUTPUT_DIR + LABEL + '_' + str(LF_labels) + '_' + str(x0)+'.npy'
     np.save(save_path, mydict)
-    print("save to:\t", save_path)
+    print("save to:\t", save_path, " *** Merge: ", merge_success, " ***")
 
     file_object = open(OUTPUT_DIR + DATA_NAME, 'a')
-    file_object.write(OUTPUT_DIR + LABEL + '_' + str(x0)+'.npy\n')
-    file_object.close()
+    file_object.write(save_path+'\t'+str(merge_success)+'\n')
+    #file_object.close()
 
-    ShowAnim(save_path)
+    #ShowAnim(save_path)
 
 
 
@@ -196,6 +200,11 @@ def save_dict(di):
     with open(filename, 'w') as f:
         f.write(json.dumps(di))
 
+
+def main():
+    for i in range(NUM_SIMU):
+        print(i)
+        simulation()
 
 
 ########################################################

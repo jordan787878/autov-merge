@@ -11,7 +11,7 @@ GOAL_X = 200
 
 class ControlMergeMulti:
     def __init__(self, car_my, car_h1, car_h2, car_h3, name):
-        print("init control merge")
+#        print("init control merge")
         self.name = name
 
         # Link my Car
@@ -29,7 +29,7 @@ class ControlMergeMulti:
 
         # Check
 #        print("merge car link check:\t",self.car_h1_obs.controller.name)
-        print("merge car link check:\t",self.car_h1_obs.s)
+#        print("merge car link check:\t",self.car_h1_obs.s)
 
         #############################################################
         # Obtain horizon
@@ -61,7 +61,7 @@ class ControlMergeMulti:
 
 
     def select_action(self):
-        print("### ego select actions ###")
+#        print("### ego select actions ###")
         
         acts_opt = self.select_opt_actions()
 
@@ -88,9 +88,9 @@ class ControlMergeMulti:
         acts_opt_h3, traj_opt_h3 = self.car_h3_obs.controller.select_opt_actions(True,self.car_my.s)
 
         # Print
-        print("human1 est opt action: ",acts_opt_h1)
-        print("human2 est opt action: ",acts_opt_h2)
-        print("human3 est opt action: ",acts_opt_h3)
+#        print("human1 est opt action: ",acts_opt_h1)
+#        print("human2 est opt action: ",acts_opt_h2)
+#        print("human3 est opt action: ",acts_opt_h3)
 
         # Get Ego Trajectory
         traj_ego = get_traj_ego(self.car_my.s,
@@ -119,7 +119,7 @@ class ControlMergeMulti:
         
         self.car_h3_obs.s = copy.deepcopy(self.car_h3_abs.s)
 
-        print("ego   merge    action: ",acts_opt)
+#        print("ego   merge    action: ",acts_opt)
 
         return acts_opt
 
@@ -194,7 +194,7 @@ class ControlMergeMulti:
         np.set_printoptions(precision=1, linewidth= 128)
         #print(cost_coli_hum1)
         #print(cost_coli_hum2)
-        print(cost_total)
+#        print(cost_total)
 
         ### Print Costs ###
         ''' 
@@ -224,9 +224,9 @@ class ControlMergeMulti:
         x_diff = (x_ego-x_other)
         y_diff = (y_ego-y_other)
 
-        if verbose:
-            print(x_ego,x_other)
-            print(y_ego,y_other)
+#        if verbose:
+#            print(x_ego,x_other)
+#            print(y_ego,y_other)
 
         for k in range(1,self.horizon+1):
             '''

@@ -14,7 +14,7 @@ MERGE_SAFE_DIST = 15
 
 class ControlHumanLead:
     def __init__(self,car_my,car_op, name):
-        print("init human leader controller")
+#        print("init human leader controller")
         self.name = name
 
         # Link My Car
@@ -22,8 +22,8 @@ class ControlHumanLead:
         self.car_op = car_op
 
         # Check
-        print("human lead control check link")
-        print("human lead ego controller state:\t",self.car_op.s)
+#        print("human lead control check link")
+#        print("human lead ego controller state:\t",self.car_op.s)
         ########################################################
 
         # Obtain horizon
@@ -47,11 +47,11 @@ class ControlHumanLead:
 
     ##################################################
     def select_action(self):
-        print("### human leader select actions ###")
+#        print("### human leader select actions ###")
 
         acts_opt, traj_opt = self.select_opt_actions(False, None)
 
-        print("human leader   action: ",acts_opt)
+#        print("human leader   action: ",acts_opt)
 
         self.action = acts_opt[0]
 
@@ -76,7 +76,7 @@ class ControlHumanLead:
         traj_ego_opt_idx = np.argmax(Qfi)
         traj_ego_opt = traj_ego[traj_ego_opt_idx,:,:]
         acts_ego_opt = self.act_set_op[traj_ego_opt_idx,:]
-        print("ego   follower action: ", acts_ego_opt)
+#        print("ego   follower action: ", acts_ego_opt)
 #        vis_hum_lead(Qfi, "ego follower Qfi", self.act_set_op)
 
         # Init Ql matrix

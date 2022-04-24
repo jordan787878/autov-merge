@@ -78,7 +78,7 @@ def ShowAnim(X):
     plt.yticks(fontsize = 20)
     plt.tight_layout()
     anim = animation.FuncAnimation(fig,animate,interval=1,fargs=(scs,sc_lfs,data,actions,colors))
-    anim.save('animations/'+str(lf_title) + str(x0_text)+'.mp4', fps=8, extra_args=['-vcodec', 'libx264'])
+#    anim.save('animations/'+str(lf_title) + str(x0_text)+'.mp4', fps=8, extra_args=['-vcodec', 'libx264'])
     plt.show()
 
 
