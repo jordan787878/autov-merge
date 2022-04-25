@@ -20,7 +20,7 @@ def mvnpdf(traj,traj_F,traj_L):
     COV = np.eye(num_states)
     pdf_F = multivariate_normal.pdf(traj-traj_F, mean=MEAN, cov=COV)
     pdf_L = multivariate_normal.pdf(traj-traj_L, mean=MEAN, cov=COV)
-    print(pdf_F, pdf_L)
+    #print(pdf_F, pdf_L)
     return pdf_F, pdf_L
 
 #mvnpdf(Traj, Traj_F, Traj_L)

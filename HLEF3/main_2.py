@@ -4,16 +4,17 @@ from controlhumanfollower import ControlHumanFoll
 from controlmergemulti import ControlMergeMulti
 from controllongi import ControlLongi
 from car2 import CarVer2
+from post_process import *
 
 import numpy as np
 from anim import ShowAnim
 
-NUM_SIMU = 1
+NUM_SIMU = 50 
 
 ### Data Setup ###
-OUTPUT_DIR = '../output/task6/'
+OUTPUT_DIR = '../output/task7/'
 DATA_NAME = 'data1.txt'
-LABEL = "0424_Triple_Test"
+LABEL = "0425_Triple_Belief_Test"
 
 ### Setup ###
 dt = 0.1
@@ -32,18 +33,18 @@ EXTEND = 10
 def simulation():
     ### Init X ###
     x0_h1 = np.random.randint(0,10)
-    #x0_h1 = 2
+    #x0_h1 = 6
     x0_h2 = np.random.randint(15,25)
     #x0_h2 = 20
     x0_h3 = np.random.randint(30,40)
-    #x0_h3 = 32
+    #x0_h3 = 35
     x0_e =  np.random.randint(5,35)
-    #x0_e = 50
+    #x0_e = 19
 
 
     # Random Choose Highway Label
     LF_labels = np.random.randint(2, size = 3)
-    #LF_labels = np.array([0,1,1])
+    #LF_labels = np.array([1,1,1])
     #print("L/F Labels: ",LF_labels)
 
     # Init Car
@@ -112,7 +113,7 @@ def simulation():
     ego.add_controller(cont_MG)
     ego.add_controller_longi(ControlLongi(ego))
     # Set Leader/Follower Belief Labels # Temp
-    ego.controller.set_belief_leader(LF_labels)
+    #ego.controller.set_belief_leader(LF_labels)
     #ego.controller.set_belief_leader(np.array([0.5,1,1]))
 
     # Link Longi Controller (x_hum1 < x_hum2 < x_hum3)
@@ -122,7 +123,7 @@ def simulation():
 ###########################################################################
 
     ### Env ###
-    simu_done = False
+    simu_done = False 
     merge_success = False
     simu_count = 0
     i = 1
@@ -186,12 +187,18 @@ def simulation():
             "car_dynamics":car_dynamics,}
 
 
+    # Obtain Min X diff after Merge
+    min_x_diff_merge = obtain_min_xdiff(states)
+    CLOSE_MERGE = False
+    if np.any(min_x_diff_merge < 7):
+        CLOSE_MERGE = True
+
     save_path = OUTPUT_DIR + LABEL + '_' + str(LF_labels) + '_' + str(x0)+'.npy'
     np.save(save_path, mydict)
-    print("save to:\t", save_path, " *** Merge: ", merge_success, " ***")
+    print("save to: ", save_path, '\t', merge_success, CLOSE_MERGE, min_x_diff_merge)
 
     file_object = open(OUTPUT_DIR + DATA_NAME, 'a')
-    file_object.write(save_path+'\t'+str(merge_success)+'\n')
+    file_object.write(save_path+'\t' + str(merge_success) + ' ' + str(CLOSE_MERGE) + ' ' + str(min_x_diff_merge) + '\n')
     #file_object.close()
 
     #ShowAnim(save_path)

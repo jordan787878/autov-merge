@@ -31,8 +31,11 @@ def animate(i,scs,sc_lfs,d,acts,colors):
 def ShowAnim(X):
     mydict = np.load(X,allow_pickle=True)
     data = mydict.item().get('states')
-#    vis_xdiff(data)
 
+    # debug
+    #print(data.shape)
+
+    vis_xdiff(data)
 
     actions = mydict.item().get('actions')
 #    vis_actions(actions)

@@ -7,7 +7,7 @@ from multi_var_pdf import *
 MERGE_SAFE_DIST = 15
 MERGE_START_X = 25
 MERGE_END_X = 175
-GOAL_X = 200
+GOAL_X = 300 # 200 before
 #############################
 
 class ControlMergeMulti:
@@ -51,6 +51,7 @@ class ControlMergeMulti:
         # Helper 
         self.count = 0
 
+        # L/F Belief
         self.belief_leader = np.array([0.5,0.5,0.5])
 
         self.act_hum_F = None
@@ -127,18 +128,22 @@ class ControlMergeMulti:
 
         acts_opt = self.act_set_my[acts_opt_idx,:]
       
-        '''
+        
         # 0424
         # Update Leader Belief
         self.belief_update(self.x_hum, self.y_hum, self.v_hum, self.yaw_hum, 
                            self.act_hum_F, self.act_hum_L,
-                           self.car_h1_obs.s)
+                           self.car_h1_obs.s, self.car_h2_obs.s, self.car_h3_obs.s)
 
         # Store human action and prev state
         self.act_hum_F = []
         self.act_hum_L = []
         self.act_hum_F.append(acts_opt_h1_F[0])
         self.act_hum_L.append(acts_opt_h1_L[0])
+        self.act_hum_F.append(acts_opt_h2_F[0])
+        self.act_hum_L.append(acts_opt_h2_L[0])
+        self.act_hum_F.append(acts_opt_h3_F[0])
+        self.act_hum_L.append(acts_opt_h3_L[0])
 
         self.x_hum = []
         self.y_hum = []
@@ -148,7 +153,14 @@ class ControlMergeMulti:
         self.y_hum.append(self.car_h1_obs.s[1])
         self.v_hum.append(self.car_h1_obs.s[2])
         self.yaw_hum.append(self.car_h1_obs.s[3])
-        '''
+        self.x_hum.append(self.car_h2_obs.s[0])
+        self.y_hum.append(self.car_h2_obs.s[1])
+        self.v_hum.append(self.car_h2_obs.s[2])
+        self.yaw_hum.append(self.car_h2_obs.s[3])
+        self.x_hum.append(self.car_h3_obs.s[0])
+        self.y_hum.append(self.car_h3_obs.s[1])
+        self.v_hum.append(self.car_h3_obs.s[2])
+        self.yaw_hum.append(self.car_h3_obs.s[3])
 
 
         # Update human1 car state
@@ -161,10 +173,47 @@ class ControlMergeMulti:
 
         return acts_opt
 
+
+    def compute_pos_belief(self, car_index, x, y, v, yaw, act_h_F, act_h_L, s):
+        print("car ", car_index)
+        # Get L/F action and Prev. State
+        act_F = act_h_F[car_index]
+        act_L = act_h_L[car_index]
+        print("act (F/L): ", act_F, act_L)
+        s_prev = np.array([x[car_index],y[car_index],v[car_index],yaw[car_index]])
+
+        # Predict current L/F state
+        s_F = get_hum_predict_state(s_prev, act_F, self.car_h1_obs.dynamics, tstep=0.1)
+        s_L = get_hum_predict_state(s_prev, act_L, self.car_h1_obs.dynamics, tstep=0.1)
+        #print("current s:", s)
+        #print("followe s:", s_F)
+        #print("leader  s:", s_L)
+
+        # 
+        pdf_F, pdf_L = mvnpdf(s, s_F, s_L)
+
+        # Get Prior Belief
+        P_F = 1 - self.belief_leader[car_index]
+        P_L = self.belief_leader[car_index]
+
+        den = pdf_F*P_F + pdf_L*P_L
+        belief_L = pdf_L*P_L/den
+        belief_F = pdf_F*P_F/den
+        self.belief_leader[car_index] = belief_L
+
+        np.set_printoptions(precision=3)
+        #print("prior proba: ",P_F, P_L)
+        #print("hum belief (F/L): ",belief_F, belief_L)
+
     
-    def belief_update(self, x, y, v, yaw, act_h_F, act_h_L, s_h1):
+    def belief_update(self, x, y, v, yaw, act_h_F, act_h_L, s_h1, s_h2, s_h3):
         if act_h_F:
             print("start belief update")
+            self.compute_pos_belief(0, x, y, v, yaw, act_h_F, act_h_L, s_h1)
+            self.compute_pos_belief(1, x, y, v, yaw, act_h_F, act_h_L, s_h2)
+            self.compute_pos_belief(2, x, y, v, yaw, act_h_F, act_h_L, s_h3)
+            print("belief leader: ",self.belief_leader)
+            '''
             act_h1_F = act_h_F[0]
             act_h1_L = act_h_L[0]
             #print("check old action")
@@ -190,7 +239,7 @@ class ControlMergeMulti:
             np.set_printoptions(precision=3)
             print("prior proba: ",P_h1_F, P_h1_L)
             print("hum1 belief: ",belief_h1_F, belief_h1_L)
-
+            '''
 
         else:
             print("don't update")
