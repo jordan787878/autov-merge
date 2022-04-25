@@ -47,10 +47,16 @@ class ControlHumanFoll:
     ##################################################
     def select_action(self):
 #        print("### human follower select actions ###")
+    
+        #print("human1 real state: ", self.car_my.s)
 
         acts_opt, traj_opt = self.select_opt_actions(False, None)
 
+        #print("human1 real actions: ", acts_opt)
+        
         self.action = acts_opt[0]
+        
+#        print("human1 real action: ", self.action)
 
 #        print("human follower action: ",acts_opt)
 
@@ -60,6 +66,7 @@ class ControlHumanFoll:
         # 0410_Problem2 Hotfix (If ego merge behind me)
         #if self.car_op.s[1] > 0 and self.car_op.s[0] < self.car_my.s[0]:
         #    self.action = 2
+
 
         return self.action
 

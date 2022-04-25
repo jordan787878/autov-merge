@@ -8,12 +8,12 @@ from car2 import CarVer2
 import numpy as np
 from anim import ShowAnim
 
-NUM_SIMU = 300
+NUM_SIMU = 1
 
 ### Data Setup ###
-OUTPUT_DIR = '../output/task5/'
+OUTPUT_DIR = '../output/task6/'
 DATA_NAME = 'data1.txt'
-LABEL = "0413_Triple_Test"
+LABEL = "0424_Triple_Test"
 
 ### Setup ###
 dt = 0.1
@@ -38,12 +38,12 @@ def simulation():
     x0_h3 = np.random.randint(30,40)
     #x0_h3 = 32
     x0_e =  np.random.randint(5,35)
-    #x0_e = 0
+    #x0_e = 50
 
 
     # Random Choose Highway Label
     LF_labels = np.random.randint(2, size = 3)
-#    LF_labels = [1,0,1]
+    #LF_labels = np.array([0,1,1])
     #print("L/F Labels: ",LF_labels)
 
     # Init Car
@@ -111,6 +111,9 @@ def simulation():
     cont_MG = ControlMergeMulti(ego,hum1,hum2,hum3,name="merge")
     ego.add_controller(cont_MG)
     ego.add_controller_longi(ControlLongi(ego))
+    # Set Leader/Follower Belief Labels # Temp
+    ego.controller.set_belief_leader(LF_labels)
+    #ego.controller.set_belief_leader(np.array([0.5,1,1]))
 
     # Link Longi Controller (x_hum1 < x_hum2 < x_hum3)
     hum1.controller_longi.set_car_lead(hum2)

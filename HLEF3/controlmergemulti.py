@@ -1,6 +1,7 @@
 import copy
 from trajectory2 import *
 from visual2 import *
+from multi_var_pdf import *
 
 #############################
 MERGE_SAFE_DIST = 15
@@ -22,14 +23,10 @@ class ControlMergeMulti:
         self.car_h2_obs = copy.deepcopy(car_h2)
         self.car_h3_obs = copy.deepcopy(car_h3)
 
-        # Store the absolute reference of Human1 Car for State Update
+        # Store the absolute reference of Human Car for State Update
         self.car_h1_abs = car_h1
         self.car_h2_abs = car_h2
         self.car_h3_abs = car_h3
-
-        # Check
-#        print("merge car link check:\t",self.car_h1_obs.controller.name)
-#        print("merge car link check:\t",self.car_h1_obs.s)
 
         #############################################################
         # Obtain horizon
@@ -39,7 +36,6 @@ class ControlMergeMulti:
         self.action = None
 
         # Get action set
-        #self.act_set_my = self.car_my.get_all_actions()
         self.act_set_my = self.car_my.get_all_ego_actions()
         self.act_set_op = self.car_h1_obs.get_all_actions()
 
@@ -47,17 +43,22 @@ class ControlMergeMulti:
         self.num_act_my = self.act_set_my.shape[0]
         self.num_act_op = self.act_set_op.shape[0]
 
-        # Check Action Set
-        #for i in range(self.num_act_my):
-        #    print(self.act_set_my[i])
-
         # Discount Vector
-        self.discount = np.zeros(self.horizon)
-        for i in range(self.horizon):
+        self.discount = np.zeros(self.horizon+1)
+        for i in range(self.horizon+1):
             self.discount[i] = pow(0.9,i)
 
         # Helper 
         self.count = 0
+
+        self.belief_leader = np.array([0.5,0.5,0.5])
+
+        self.act_hum_F = None
+        self.act_hum_L = None
+        self.x_hum = None
+        self.y_hum = None
+        self.v_hum = None
+        self.yaw_hum = None
 
 
     def select_action(self):
@@ -75,23 +76,6 @@ class ControlMergeMulti:
 
 
     def select_opt_actions(self):
-#        print("Estimate hum1 car states:\t", self.car_h1_obs.s)
-        
-        # Get Human1 Opt Action and Traj
-        acts_opt_h1, traj_opt_h1 = self.car_h1_obs.controller.select_opt_actions(True,self.car_my.s)
-#        print("Estimate hum1 leader opt actions: ", acts_opt_h1)
-       
-        # Get Human2 Opt Action and Traj
-        acts_opt_h2, traj_opt_h2 = self.car_h2_obs.controller.select_opt_actions(True,self.car_my.s)
-        #print("Estimate hum1 follower opt actions: ", acts_opt_h1)
-        
-        acts_opt_h3, traj_opt_h3 = self.car_h3_obs.controller.select_opt_actions(True,self.car_my.s)
-
-        # Print
-#        print("human1 est opt action: ",acts_opt_h1)
-#        print("human2 est opt action: ",acts_opt_h2)
-#        print("human3 est opt action: ",acts_opt_h3)
-
         # Get Ego Trajectory
         traj_ego = get_traj_ego(self.car_my.s,
                                 self.act_set_my,
@@ -100,37 +84,128 @@ class ControlMergeMulti:
                                 self.car_my.lane_width,
                                 self.car_my.dynamics)
 
+        # Get Human1 Opt Action and Traj
+        # NOTE: 0424
+ #       print("human1 obsv state: ", self.car_h1_obs.s)
+        acts_opt_h1_F, traj_opt_h1_F = self.get_human_follower_traj(traj_ego, self.car_my.s, self.car_h1_obs.s, 
+                                                                    self.act_set_op, self.horizon, self.car_h1_obs.dynamics)
+        acts_opt_h1_L, traj_opt_h1_L = self.get_human_leader_traj(traj_ego, self.car_my.s, self.car_h1_obs.s,
+                                                                  self.act_set_op, self.horizon, self.car_h1_obs.dynamics)
+        #acts_opt_h1, traj_opt_h1 = self.car_h1_obs.controller.select_opt_actions(True,self.car_my.s)
+        #print("Estimate hum1 opt actions: ", acts_opt_h1)
+       
+        # Get Human2 Opt Action and Traj
+        acts_opt_h2_F, traj_opt_h2_F = self.get_human_follower_traj(traj_ego, self.car_my.s, self.car_h2_obs.s,
+                                                                    self.act_set_op, self.horizon, self.car_h2_obs.dynamics)
+        acts_opt_h2_L, traj_opt_h2_L = self.get_human_leader_traj(traj_ego, self.car_my.s, self.car_h2_obs.s,
+                                                                  self.act_set_op, self.horizon, self.car_h2_obs.dynamics)
+        #acts_opt_h2, traj_opt_h2 = self.car_h2_obs.controller.select_opt_actions(True,self.car_my.s)
+        #print("Estimate hum2 opt actions: ", acts_opt_h2)
+        
+        # Get Human2 Opt Action and Traj
+        acts_opt_h3_F, traj_opt_h3_F = self.get_human_follower_traj(traj_ego, self.car_my.s, self.car_h3_obs.s,
+                                                                    self.act_set_op, self.horizon, self.car_h3_obs.dynamics)
+        acts_opt_h3_L, traj_opt_h3_L = self.get_human_leader_traj(traj_ego, self.car_my.s, self.car_h3_obs.s,
+                                                                  self.act_set_op, self.horizon, self.car_h3_obs.dynamics)
+        #acts_opt_h3, traj_opt_h3 = self.car_h3_obs.controller.select_opt_actions(True,self.car_my.s)
+
+        # Print
+#        print("human1 F est action: ",acts_opt_h1_F)
+#        print("human2 est opt action: ",acts_opt_h2)
+#        print("human3 est opt action: ",acts_opt_h3)
+
+
 #        vis_traj(traj_opt_h1, traj_ego)
 
         # MPC Cost
-        MPC_Cost = self.mpc_cost(traj_ego,traj_opt_h1,traj_opt_h2,traj_opt_h3)
-
+        MPC_Cost = self.mpc_cost(traj_ego,traj_opt_h1_F,traj_opt_h1_L,
+                                          traj_opt_h2_F,traj_opt_h2_L,
+                                          traj_opt_h3_F,traj_opt_h3_L)
 #        vis_Qmatrix(-MPC_Cost,self.act_set_my, np.array([1]), self.name + " reward Matrix")
 
         acts_opt_idx = np.argmin(MPC_Cost)
 
         acts_opt = self.act_set_my[acts_opt_idx,:]
+      
+        '''
+        # 0424
+        # Update Leader Belief
+        self.belief_update(self.x_hum, self.y_hum, self.v_hum, self.yaw_hum, 
+                           self.act_hum_F, self.act_hum_L,
+                           self.car_h1_obs.s)
+
+        # Store human action and prev state
+        self.act_hum_F = []
+        self.act_hum_L = []
+        self.act_hum_F.append(acts_opt_h1_F[0])
+        self.act_hum_L.append(acts_opt_h1_L[0])
+
+        self.x_hum = []
+        self.y_hum = []
+        self.v_hum = []
+        self.yaw_hum = []
+        self.x_hum.append(self.car_h1_obs.s[0])
+        self.y_hum.append(self.car_h1_obs.s[1])
+        self.v_hum.append(self.car_h1_obs.s[2])
+        self.yaw_hum.append(self.car_h1_obs.s[3])
+        '''
+
 
         # Update human1 car state
         #print('Esitmate hum1 leaderr states: ',self.car_h1_obs.s)
         self.car_h1_obs.s = copy.deepcopy(self.car_h1_abs.s)
         #print('Esitmate hum2 follower states: ',self.car_h2_obs.s)
         self.car_h2_obs.s = copy.deepcopy(self.car_h2_abs.s)
-        
         self.car_h3_obs.s = copy.deepcopy(self.car_h3_abs.s)
-
-#        print("ego   merge    action: ",acts_opt)
+        
 
         return acts_opt
 
+    
+    def belief_update(self, x, y, v, yaw, act_h_F, act_h_L, s_h1):
+        if act_h_F:
+            print("start belief update")
+            act_h1_F = act_h_F[0]
+            act_h1_L = act_h_L[0]
+            #print("check old action")
+            print("F/L actions: ",act_h1_F, act_h1_L)
 
-    def mpc_cost(self,traj_eg,traj_h1,traj_h2,traj_h3):
+            s_h1_prev = np.array([x[0],y[0],v[0],yaw[0]])
+            s_h1_F = get_hum_predict_state(s_h1_prev, act_h1_F, self.car_h1_obs.dynamics, tstep=0.1)
+            s_h1_L = get_hum_predict_state(s_h1_prev, act_h1_L, self.car_h1_obs.dynamics, tstep=0.1)
+            #print("prev s: ", s_h1_prev)
+            print("current s:", s_h1)
+            print("followe s:", s_h1_F)
+            print("leader  s:", s_h1_L)
+            h1_pdf_F, h1_pdf_L = mvnpdf(s_h1, s_h1_F, s_h1_L)
+
+            P_h1_F = 1 - self.belief_leader[0]
+            P_h1_L = self.belief_leader[0]
+
+            h1_den = h1_pdf_F*P_h1_F + h1_pdf_L*P_h1_L
+            belief_h1_L = h1_pdf_L*P_h1_L/h1_den
+            belief_h1_F = h1_pdf_F*P_h1_F/h1_den
+            self.belief_leader[0] = belief_h1_L
+            
+            np.set_printoptions(precision=3)
+            print("prior proba: ",P_h1_F, P_h1_L)
+            print("hum1 belief: ",belief_h1_F, belief_h1_L)
+
+
+        else:
+            print("don't update")
+        return 0
+   
+
+
+    def mpc_cost(self,traj_eg,traj_h1_F,traj_h1_L,traj_h2_F,traj_h2_L,traj_h3_F,traj_h3_L):
         # init
         cost_total = np.zeros(self.num_act_my)
         cost_coli_sum = np.zeros(self.num_act_my)
-        cost_coli_hum1 = np.zeros(self.num_act_my)
-        cost_coli_hum2 = np.zeros(self.num_act_my)
-        cost_coli_hum3 = np.zeros(self.num_act_my)
+        # 0424
+        cost_coli_hum1 = np.zeros((self.num_act_my,2))
+        cost_coli_hum2 = np.zeros((self.num_act_my,2))
+        cost_coli_hum3 = np.zeros((self.num_act_my,2))
         cost_merge     = np.zeros(self.num_act_my)
 
         #######################################################################
@@ -142,29 +217,19 @@ class ControlMergeMulti:
             # Ego Merge Check
             if traj_ego_i[0,-1] >= MERGE_END_X and traj_ego_i[1,-1] < 0.4:
                 cost_total[i] = 100000
-#                print("merge fail at act:\t",i)
 
-
-            ###################################################################
             # Interation with Human 1
-            cost_coli = self.if_collision(traj_ego_i,traj_h1) * 50
-            cost_coli_hum1[i] = cost_coli.sum()
+            #cost_coli_F = self.if_collision(traj_ego_i,traj_h1_F) * 50
+            #cost_coli_L = self.if_collision(traj_ego_i,traj_h1_L) * 50
+            #cost_coli_hum1[i,0] = cost_coli_F.sum()
+            #cost_coli_hum1[i,1] = cost_coli_L.sum()
+            cost_coli_hum1[i,0], cost_coli_hum1[i,1] = self.MPC_cost_collision(traj_ego_i, traj_h1_F, traj_h1_L)
 
-#            np.set_printoptions(linewidth= 100)
-#            print(traj_ego_i[0,:],traj_ego_i[1,:])
-#            print(traj_h1[0,:], traj_h1[1,:])
+            # Interaction with Human 2 
+            cost_coli_hum2[i,0], cost_coli_hum2[i,1] = self.MPC_cost_collision(traj_ego_i, traj_h2_F, traj_h2_L)
 
-            ###################################################################
-            # Interation with Human 2 
-            cost_coli = self.if_collision(traj_ego_i,traj_h2) * 50 
-            cost_coli_hum2[i] = cost_coli.sum()
-
-#            print(traj_ego_i)
-#            print(traj_h2)
-#            print("\n")
-
-            cost_coli = self.if_collision(traj_ego_i,traj_h3) * 50 
-            cost_coli_hum3[i] = cost_coli.sum()
+            # Interaction with Human 3
+            cost_coli_hum3[i,0], cost_coli_hum3[i,1] = self.MPC_cost_collision(traj_ego_i, traj_h3_F, traj_h3_L)
 
             ###################################################################
             ### Merge Cost ###
@@ -173,6 +238,8 @@ class ControlMergeMulti:
             
 
             cost_merge[i] = cost_merge_vector.sum()
+            
+            # debug
             ''' 
             print("act:",self.act_set_my[i])
             print("ego traj:\n", traj_ego_i[0:2,:])
@@ -184,20 +251,16 @@ class ControlMergeMulti:
         
         #######################################################################
         ### 1. Collision Cost ###
-        cost_coli_sum = cost_coli_hum1 + cost_coli_hum2 + cost_coli_hum3
-#        print("human1 collision cost:\t",cost_coli_hum1)
-#        print("human2 collision cost:\t",cost_coli_hum2)
+        cost_coli_sum = (1-self.belief_leader[0])*cost_coli_hum1[:,0] + (self.belief_leader[0])*cost_coli_hum1[:,1] + \
+                        (1-self.belief_leader[1])*cost_coli_hum2[:,0] + (self.belief_leader[1])*cost_coli_hum2[:,1] + \
+                        (1-self.belief_leader[2])*cost_coli_hum3[:,0] + (self.belief_leader[2])*cost_coli_hum3[:,1]
 
         ### Total Cost ###
         cost_total += 1*cost_coli_sum + 1*cost_merge # + 0*(-Qf_ego_hum1) + 0*(-Ql_ego_hum1) + 0*(-Ql_ego_hum2)
 
-        np.set_printoptions(precision=1, linewidth= 128)
-        #print(cost_coli_hum1)
-        #print(cost_coli_hum2)
-#        print(cost_total)
-
-        ### Print Costs ###
+        # debug
         ''' 
+        np.set_printoptions(precision=1, linewidth= 128)
         for i in range(self.num_act_my):
 
             print("act:",self.act_set_my[i])
@@ -209,11 +272,142 @@ class ControlMergeMulti:
             print("\n")
         ''' 
 #        vis_ego_cost(cost_merge, cost_coli_sum, cost_total, 'ego cost', self.act_set_my) 
-        ###################
         
         return cost_total
 
-    def if_collision(self,traj_ego,traj_hum,verbose=False):
+
+##### Leader Follower Game #####
+
+    def get_human_follower_traj(self,traj_ego,s_ego,s_hum,acts_hum,horizon_hum,dynamics_hum):
+        # Check Traffic States
+        #print(" ---- Estimate ---- ")
+        #print("s_ego, s_hum: ", s_ego, s_hum)
+
+        # Init Cost Matrix
+        num_act_hum = acts_hum.shape[0]
+        num_act_ego = self.num_act_my
+        Qf = np.zeros((num_act_hum, num_act_ego))
+        Qfi = np.zeros(num_act_hum)
+        #print(num_act_hum)
+        #print(num_act_ego)
+
+        # Expand hum trajectory
+        traj_hum = get_hum_traj(s_hum, acts_hum, horizon_hum, dynamics_hum)
+
+        # Loop over possible (traj_hum, traj_ego)
+        for i in range(num_act_hum):
+            traj_hum0 = traj_hum[i,:]
+            for j in range(num_act_ego):
+                traj_ego0 = traj_ego[j,:]
+                Qf[i,j] = self.compute_Q_hum(traj_ego0,traj_hum0)
+            Qfi[i] = np.min(Qf[i,:])
+
+        # Get optimize traj
+        traj_opt_idx = np.argmax(Qfi)
+        traj_opt = traj_hum[traj_opt_idx,:,:]
+        acts_opt = acts_hum[traj_opt_idx,:]
+
+        return acts_opt, traj_opt
+
+
+    def compute_Q_hum(self, traj_ego, traj_hum):
+        # Init
+        R_distance = np.zeros(traj_ego.shape[1])
+        R_collision = -100
+        R = 0
+
+        ###### Collision Reward ##### (entire horizon)
+        R_collision = self.if_collision(traj_ego,traj_hum)*R_collision
+        R_colli = R_collision.sum()
+
+        ##### Distance Reward #####
+        goal = GOAL_X
+        # Normalized Distance Reward for each step, (min: -1, max: 0)
+        R_distance = -abs(traj_hum[0,:] - goal)/(goal)
+
+        # Reward
+        R = np.minimum(R_distance, R_collision)
+
+        # Discount factor for each step
+        R = R*self.discount
+
+        # Cumulative reward over entire horizon
+        R = R.sum()
+
+        return R
+
+
+    def get_human_leader_traj(self,traj_ego,s_ego,s_hum,acts_hum,horizon_hum,dynamics_hum):
+        # Init Cost Matrix
+        num_act_hum = acts_hum.shape[0]
+        num_act_ego = self.num_act_my
+
+        # Expand hum trajectory
+        traj_hum = get_hum_traj(s_hum, acts_hum, horizon_hum, dynamics_hum)
+
+        # Get ego follower optimal trajectory
+        Qfi = self.compute_Qf_ego(traj_ego, traj_hum)
+        traj_ego_opt_idx = np.argmax(Qfi)
+        traj_ego_opt = traj_ego[traj_ego_opt_idx,:,:]
+        acts_ego_opt = self.act_set_my[traj_ego_opt_idx,:]
+
+        # Compute hum leader Cost Matrix
+        Ql = np.zeros(num_act_hum)
+        for i in range(num_act_hum):
+            Ql[i] = self.compute_Q_hum(traj_ego_opt, traj_hum[i])
+
+        # Get optimal hum leader trajectory
+        traj_opt_idx = np.argmax(Ql)
+        traj_opt = traj_hum[traj_opt_idx,:,:]
+        acts_opt = acts_hum[traj_opt_idx,:]
+        
+        return acts_opt, traj_opt
+
+
+    def compute_Qf_ego(self, traj_ego, traj_hum):
+        Qf = np.zeros((traj_ego.shape[0],traj_hum.shape[0]))
+        Qfi = np.zeros(traj_ego.shape[0])
+        
+        for i in range(traj_ego.shape[0]):
+            for j in range(traj_hum.shape[0]):
+                Qf[i,j] = self.compute_ego_reward(traj_ego[i],traj_hum[j])
+            Qfi[i] = np.min(Qf[i,:])
+
+        return Qfi
+
+
+    def compute_ego_reward(self, traj_ego, traj_hum):
+        # Init
+        R_distance = np.zeros(traj_ego.shape[1])
+        R_collision = -100
+        R = 0
+
+        ###### Collision Reward ##### (entire horizon)
+        R_collision = self.if_collision(traj_ego,traj_hum)*R_collision
+
+        ##### Distance Reward #####
+        goal = GOAL_X
+        for k in range(traj_ego.shape[1]):
+            x_ego = traj_ego[0,k]
+            y_ego = traj_ego[1,k]
+            if x_ego >= 25 and x_ego <= 175 and y_ego < 0.5:
+                R_distance[k] = -abs(x_ego-goal)/goal -10*abs(y_ego-2.5)/2.5
+            else:
+                R_distance[k] = -abs(x_ego-goal)/goal
+            if x_ego >= 100 and y_ego < 0.5:
+                R_distance[k] = -100
+        
+        ##### Total Reward #####
+        R = np.minimum(R_distance, R_collision)
+        R = R*self.discount
+        R = R.sum()
+
+        return R
+
+##### Leader Follower Game #####
+
+
+    def if_collision(self,traj_ego,traj_hum):
         col_flag = np.zeros(self.horizon+1)
 
         x_ego = traj_ego[0,:]
@@ -224,26 +418,25 @@ class ControlMergeMulti:
         x_diff = (x_ego-x_other)
         y_diff = (y_ego-y_other)
 
-#        if verbose:
-#            print(x_ego,x_other)
-#            print(y_ego,y_other)
-
         for k in range(1,self.horizon+1):
-            '''
-            if abs(x_diff[k]) >= MERGE_SAFE_DIST or abs(y_diff[k]) >= 2.4:
-                col_flag[k] = 0
-            else:
-                col_flag[k] = 1
-            '''
             if abs(x_diff[k]) <= MERGE_SAFE_DIST and abs(y_diff[k]) < self.car_my.lane_width:
                 col_flag[k] = 1
             else:
                 col_flag[k] = 0
 
-        # TEST Collision Flog over Entire Horizon
+        # Collision Flog over Entire Horizon
         if col_flag.any() == 1:
             col_flag = np.ones(self.horizon+1)
 
         return col_flag
 
+    # Belief Helper Fcn
+    def set_belief_leader(self, LF_labels):
+        self.belief_leader = LF_labels
 
+    
+    # MPC Helper Fcn
+    def MPC_cost_collision(self, traj_ego, traj_hum_F, traj_hum_L):
+        cost_coli_F = self.if_collision(traj_ego,traj_hum_F) * 50
+        cost_coli_L = self.if_collision(traj_ego,traj_hum_L) * 50
+        return cost_coli_F.sum(), cost_coli_L.sum()

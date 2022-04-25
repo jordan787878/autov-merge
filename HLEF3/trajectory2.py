@@ -114,3 +114,34 @@ def get_hum_traj(s0,act_set,horizon,dynamics,tstep=dt):
             traj[i,:,k+1] = np.array([x,y0,v,yaw0])
 
     return traj
+
+
+def get_hum_predict_state(s0,act,dynamics,tstep=dt):
+    accel = dynamics['accel']
+    v_min = dynamics['v_min']
+    v_max = dynamics['v_max']
+
+    x0, y0, v0, yaw0 = s0
+    
+    # Apply Action
+    if act == 0:
+        u = -1*accel
+    elif act == 1:
+        u = 0
+    else:
+        u =  1*accel
+
+    # Integral: update states
+    v = v0 + u*tstep
+    v = np.clip(v,v_min,v_max)
+    if v0 >= v_max or v0 <= v_min: #0411
+        u = 0
+    x = x0 + v0*tstep# + 0.5*u*tstep*tstep #0410
+    y = y0
+    yaw = yaw0
+
+    s = np.array([x,y,v,yaw])
+
+    return s
+
+
