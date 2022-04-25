@@ -175,11 +175,11 @@ class ControlMergeMulti:
 
 
     def compute_pos_belief(self, car_index, x, y, v, yaw, act_h_F, act_h_L, s):
-        print("car ", car_index)
+        #print("car ", car_index)
         # Get L/F action and Prev. State
         act_F = act_h_F[car_index]
         act_L = act_h_L[car_index]
-        print("act (F/L): ", act_F, act_L)
+        #print("act (F/L): ", act_F, act_L)
         s_prev = np.array([x[car_index],y[car_index],v[car_index],yaw[car_index]])
 
         # Predict current L/F state
@@ -208,43 +208,11 @@ class ControlMergeMulti:
     
     def belief_update(self, x, y, v, yaw, act_h_F, act_h_L, s_h1, s_h2, s_h3):
         if act_h_F:
-            print("start belief update")
+            #print("start belief update")
             self.compute_pos_belief(0, x, y, v, yaw, act_h_F, act_h_L, s_h1)
             self.compute_pos_belief(1, x, y, v, yaw, act_h_F, act_h_L, s_h2)
             self.compute_pos_belief(2, x, y, v, yaw, act_h_F, act_h_L, s_h3)
-            print("belief leader: ",self.belief_leader)
-            '''
-            act_h1_F = act_h_F[0]
-            act_h1_L = act_h_L[0]
-            #print("check old action")
-            print("F/L actions: ",act_h1_F, act_h1_L)
-
-            s_h1_prev = np.array([x[0],y[0],v[0],yaw[0]])
-            s_h1_F = get_hum_predict_state(s_h1_prev, act_h1_F, self.car_h1_obs.dynamics, tstep=0.1)
-            s_h1_L = get_hum_predict_state(s_h1_prev, act_h1_L, self.car_h1_obs.dynamics, tstep=0.1)
-            #print("prev s: ", s_h1_prev)
-            print("current s:", s_h1)
-            print("followe s:", s_h1_F)
-            print("leader  s:", s_h1_L)
-            h1_pdf_F, h1_pdf_L = mvnpdf(s_h1, s_h1_F, s_h1_L)
-
-            P_h1_F = 1 - self.belief_leader[0]
-            P_h1_L = self.belief_leader[0]
-
-            h1_den = h1_pdf_F*P_h1_F + h1_pdf_L*P_h1_L
-            belief_h1_L = h1_pdf_L*P_h1_L/h1_den
-            belief_h1_F = h1_pdf_F*P_h1_F/h1_den
-            self.belief_leader[0] = belief_h1_L
-            
-            np.set_printoptions(precision=3)
-            print("prior proba: ",P_h1_F, P_h1_L)
-            print("hum1 belief: ",belief_h1_F, belief_h1_L)
-            '''
-
-        else:
-            print("don't update")
-        return 0
-   
+            #print("belief leader: ",self.belief_leader)
 
 
     def mpc_cost(self,traj_eg,traj_h1_F,traj_h1_L,traj_h2_F,traj_h2_L,traj_h3_F,traj_h3_L):

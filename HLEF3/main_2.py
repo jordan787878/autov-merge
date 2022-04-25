@@ -123,7 +123,7 @@ def simulation():
 ###########################################################################
 
     ### Env ###
-    simu_done = False 
+    simu_done = False
     merge_success = False
     simu_count = 0
     i = 1
@@ -195,10 +195,12 @@ def simulation():
 
     save_path = OUTPUT_DIR + LABEL + '_' + str(LF_labels) + '_' + str(x0)+'.npy'
     np.save(save_path, mydict)
-    print("save to: ", save_path, '\t', merge_success, CLOSE_MERGE, min_x_diff_merge)
+    print("save to: ", save_path, '\t', merge_success, CLOSE_MERGE, min_x_diff_merge, ego.controller.belief_leader)
 
     file_object = open(OUTPUT_DIR + DATA_NAME, 'a')
-    file_object.write(save_path+'\t' + str(merge_success) + ' ' + str(CLOSE_MERGE) + ' ' + str(min_x_diff_merge) + '\n')
+    file_object.write(save_path+'\t' + str(merge_success) + 
+                      ' ' + str(CLOSE_MERGE) + ' ' + str(min_x_diff_merge) + 
+                      ' ' + str(ego.controller.belief_leader) + '\n')
     #file_object.close()
 
     #ShowAnim(save_path)
