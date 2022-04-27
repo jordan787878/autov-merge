@@ -114,19 +114,9 @@ class ControlHumanFoll:
             Qfi[i] = np.min(Qf[i,:])
             R_col[i] = np.min(R_colli[i,:])     
 
-        # Pring
-        # print(Qfi)
-        # print(R_col)
-        # Max Qf 
         traj_opt_idx = np.argmax(Qfi)
         traj_opt = traj_hum[traj_opt_idx,:,:]
         acts_opt = self.act_set_my[traj_opt_idx,:]
-
-        #if call_from_ego == False:
-        #    print("human follow opt actions: ",traj_opt_idx, acts_opt)
-        #    print("follow cost: ", Qfi)
-            #vis_Qmatrix(Qf,self.act_set_my,self.act_set_op,'human follow')
-            #vis_tra1_tra2(traj_hum,traj_ego)
 
         return acts_opt, traj_opt
 
@@ -148,18 +138,12 @@ class ControlHumanFoll:
 
         # Normalized Distance Reward for each step, (min: -1, max: 0)
         R_distance = -abs(traj_hum[0,:] - goal)/(goal)
-        #print(traj_ego[0,:], end =' ')
-        #print(traj_ego[1,:], end =' ')
-        #print(traj_hum[0,:], end =' ')
-        #print(R_distance,end=' ')
-        #print(R_collision)
 
         # Reward
-        #R = R_distance + R_collision
         R = np.minimum(R_distance, R_collision)
 
         # Discount factor for each step
-        #R = R*self.discount
+        R = R*self.discount
 
         # Cumulative reward over entire horizon
         R = R.sum()
@@ -179,12 +163,6 @@ class ControlHumanFoll:
         y_diff = (y_ego-y_other)
 
         for k in range(1,self.horizon+1):
-            '''
-            if abs(x_diff[k]) >= MERGE_SAFE_DIST or abs(y_diff[k]) >= 2.4:
-                col_flag[k] = 0
-            else:
-                col_flag[k] = 1
-            '''
             if abs(x_diff[k]) <= MERGE_SAFE_DIST and abs(y_diff[k]) < self.car_my.lane_width:
                 col_flag[k] = 1
             else:

@@ -165,17 +165,6 @@ class ControlHumanLead:
         # Normalized Distance Reward for each step, (min: -1, max: 0)
         R_distance = -abs(traj_hum[0,:] - goal)/(goal)
 
-        x_ego = traj_ego[0,:]
-        y_ego = traj_ego[1,:]
-        x_other = traj_hum[0,:]
-        y_other = traj_hum[1,:]
-
-        x_diff = (x_ego-x_other)
-        y_diff = (y_ego-y_other)
-#        print(x_ego,' ', y_ego)
-#        print(x_diff, ' ', y_diff, ' ', R_collision)
-#        print("\n")
-
         R = np.minimum(R_distance, R_collision)
 
         R = R*self.discount

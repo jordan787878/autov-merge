@@ -64,9 +64,13 @@ def get_traj_ego(s0,act_set,horizon,merge_steps,lane_width,dynamics,tstep=dt):
             # inputs: u
             v = v0 + u*dt
             v = np.clip(v,v_min,v_max)
-            #x = x0 + v0*dt
-            if v0 >= v_max or v0 <= v_min: #0411
+
+            # 0425 Velocity Constraints saturate Acceleration
+            if v0 >= v_max and u > 0:
                 u = 0
+            if v0 <= v_min and u < 0:
+                u = 0
+
             x = x0 + v0*dt + 0.5*u*dt*dt #0410
             y = np.clip(y,0,lane_width)
             yaw = yaw0
@@ -144,4 +148,23 @@ def get_hum_predict_state(s0,act,dynamics,tstep=dt):
 
     return s
 
+
+def test():
+    act_ego = np.array([[0,0,0,3],[0,0,0,3]])
+    dynamics = {"v_min":18,"v_max":30 ,"accel":3}
+    s_ego = np.array([15,0,30,0])
+    traj_ego = get_traj_ego(s_ego,act_ego,4,10,2,dynamics)
+    
+    act_hum = np.array([[1,1,1,1],[1,1,1,1]])
+    s_hum = np.array([0,2.5,30,0])
+    traj_hum = get_hum_traj(s_hum,act_hum,4,dynamics) 
+ 
+    print(traj_ego[0])
+    print(traj_hum[0])
+
+def main():
+    test()
+
+if __name__ == "__main__":
+    main()
 

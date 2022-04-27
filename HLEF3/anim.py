@@ -35,10 +35,10 @@ def ShowAnim(X):
     # debug
     #print(data.shape)
 
-    vis_xdiff(data)
+    #vis_xdiff(data)
 
     actions = mydict.item().get('actions')
-#    vis_actions(actions)
+    #vis_actions(actions)
 
 
     #print(actions)
@@ -56,7 +56,7 @@ def ShowAnim(X):
 
 #   print(data)
 
-    ax.set_xlim([0,200])
+    ax.set_xlim([-30,200])
     ax.set_ylim([0-0.5*lane_width,2.5+0.5*lane_width])
     ax.set_xticks(np.linspace(0,200,21))
     scs = []

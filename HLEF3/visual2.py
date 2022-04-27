@@ -156,32 +156,55 @@ def vis_hum_lead(Qfi,title,xticks):
 
 
 
-def vis_ego_cost(Q_merge,Q_coli,Q_total,title,xticks):
+def vis_ego_cost(Q_enforce, Q_merge,Q_coli,Q_total,title,xticks):
     scale = 5 
 
     num_Q = Q_merge.shape[0]
     x = np.arange(0,num_Q)
     x = scale*x
     
-    fig, (ax,ax1,ax2,ax3) = plt.subplots(4,1,figsize=(10,10))
-    ax.plot(x,Q_merge,'r')
-    ax1.plot(x,Q_coli,'g')
-    ax2.plot(x,Q_total,'b')
+    fig, (ax,ax1,ax2,ax3,ax4) = plt.subplots(5,1,figsize=(10,10))
+    ax.plot(x,Q_enforce,'r')
+    ax1.plot(x,Q_merge,'g')
+    ax2.plot(x,Q_coli,'b')
+    ax3.plot(x,Q_total,'black')
+
+    ax.set_ylabel('enforce')
+    ax1.set_ylabel('merge goal')
+    ax2.set_ylabel('colli')
+    ax3.set_ylabel('total')
+
+    ax.set_xticks(x)
+    ax1.set_xticks(x)
+    ax2.set_xticks(x)
+    ax3.set_xticks(x)
+
+    ax.grid(which='both')
+    ax1.grid(which='both')
+    ax2.grid(which='both')
+    ax3.grid(which='both')
+   
+    ax.set_xticklabels([])
+    ax1.set_xticklabels([])
+    ax2.set_xticklabels([])
+    ax3.set_xticklabels([])
+    #ax.set_xticks(color='white')
+
     
     x_min = np.argmin(Q_total)
     cost_min = np.min(Q_total)
     opt_act = xticks[x_min]
-    ax2.scatter(scale*x_min,cost_min)
+    ax3.scatter(scale*x_min,cost_min)
 
     ax.set_aspect('auto')
-    plt.suptitle(title+str(opt_act))
+    plt.suptitle(str(opt_act))
 
     colors = ['r','g','b','y']
     for i in range(xticks.shape[0]):
         act0 = xticks[i]
         act0_x = [scale*i,scale*i,scale*i,scale*i]
         act0_y = [-70,-50,-30,-10]
-        ax3.scatter(act0_x,act0_y,c=[colors[act0[0]],colors[act0[1]],colors[act0[2]],colors[act0[3]]])
+        ax4.scatter(act0_x,act0_y,c=[colors[act0[0]],colors[act0[1]],colors[act0[2]],colors[act0[3]]])
 
     #labels = np.array([str(xx) for xx in xticks])
     #plt.xticks(x, labels, rotation = 'vertical',fontsize = 5)
@@ -274,7 +297,7 @@ def vis_xdiff(states):
     safe_x_diff = 7
 
     # Get Ego Merge Time
-    time_merge = np.argwhere(y_ego > 0)[0]
+    time_merge = np.argwhere(y_ego > 1.0)[0]
     time_merge = time_merge[0]
 
     # Init Min X Diff. after merge

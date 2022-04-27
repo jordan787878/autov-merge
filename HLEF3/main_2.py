@@ -9,12 +9,14 @@ from post_process import *
 import numpy as np
 from anim import ShowAnim
 
-NUM_SIMU = 50 
+NUM_SIMU = 10 
+VERBOSE = False
+MIN_X_DIFF = 5
 
 ### Data Setup ###
-OUTPUT_DIR = '../output/task7/'
+OUTPUT_DIR = '../output/task9/'
 DATA_NAME = 'data1.txt'
-LABEL = "0425_Triple_Belief_Test"
+LABEL = "0427_Single_HumanLeader_Test"
 
 ### Setup ###
 dt = 0.1
@@ -32,19 +34,18 @@ EXTEND = 10
 
 def simulation():
     ### Init X ###
-    x0_h1 = np.random.randint(0,10)
-    #x0_h1 = 6
+    x0_h1 = np.random.randint(-25,25)
+    x0_h1 = 15 
     x0_h2 = np.random.randint(15,25)
-    #x0_h2 = 20
+    x0_h2 = 200
     x0_h3 = np.random.randint(30,40)
-    #x0_h3 = 35
-    x0_e =  np.random.randint(5,35)
-    #x0_e = 19
-
+    x0_h3 = 200
+    x0_e =  np.random.randint(0,40)
+    x0_e = 0 
 
     # Random Choose Highway Label
     LF_labels = np.random.randint(2, size = 3)
-    #LF_labels = np.array([1,1,1])
+    LF_labels = np.array([1,1,1])
     #print("L/F Labels: ",LF_labels)
 
     # Init Car
@@ -113,7 +114,7 @@ def simulation():
     ego.add_controller(cont_MG)
     ego.add_controller_longi(ControlLongi(ego))
     # Set Leader/Follower Belief Labels # Temp
-    #ego.controller.set_belief_leader(LF_labels)
+    ego.controller.set_belief_leader(LF_labels)
     #ego.controller.set_belief_leader(np.array([0.5,1,1]))
 
     # Link Longi Controller (x_hum1 < x_hum2 < x_hum3)
@@ -149,15 +150,13 @@ def simulation():
             #print("extend count")
             simu_count += 1
 
-        #print("\n===== Step: ",i," =====")
+        if VERBOSE:
+            print("\n===== Step: ",i," =====")
         states.append(np.hstack((ego.s,hum1.s,hum2.s,hum3.s)))
         actions.append(np.hstack((ego.car_action,hum1.car_action,hum2.car_action,hum3.car_action)))
         x_log = "x (e,h1,h2,h3) {:3.1f} {:3.1f} {:3.1f} {:3.1f}".format(ego.s[0],hum1.s[0],hum2.s[0],hum3.s[0])
-        #print(x_log)
         v_log = "v (e,h1,h2,h3) {:3.1f} {:3.1f} {:3.1f} {:3.1f}".format(ego.s[2],hum1.s[2],hum2.s[2],hum3.s[2])
-        #print(v_log)
         y_log = "y (e,h1,h2,h3) {:3.1f} {:3.1f} {:3.1f} {:3.1f}".format(ego.s[1],hum1.s[1],hum2.s[1],hum3.s[1])
-        #print(y_log)
 
         hum1.update(dt)
         hum2.update(dt)
@@ -166,7 +165,12 @@ def simulation():
         i += 1
 
         a_log = "=== action (e,h1,h2,h3) {:3d}{:3d}{:3d}{:3d} ===".format(ego.car_action, hum1.car_action,hum2.car_action, hum3.car_action)
-        #print(a_log)
+
+        if VERBOSE:
+            print(x_log)
+            print(y_log)
+            print(v_log)
+            print(a_log)
 
     states = np.array(states)
     actions = np.array(actions).reshape(-1,NUM_CARS)
@@ -190,7 +194,7 @@ def simulation():
     # Obtain Min X diff after Merge
     min_x_diff_merge = obtain_min_xdiff(states)
     CLOSE_MERGE = False
-    if np.any(min_x_diff_merge < 7):
+    if np.any(min_x_diff_merge < MIN_X_DIFF):
         CLOSE_MERGE = True
 
     save_path = OUTPUT_DIR + LABEL + '_' + str(LF_labels) + '_' + str(x0)+'.npy'

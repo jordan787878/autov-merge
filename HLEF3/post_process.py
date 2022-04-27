@@ -8,7 +8,7 @@ def obtain_min_xdiff(states):
 
     if np.any(y_ego > 0):
         # Get Ego Merge Time
-        time_merge = np.argwhere(y_ego > 0)[0]
+        time_merge = np.argwhere(y_ego > 1.0)[0]
         time_merge = time_merge[0]
 
         # Init Min X Diff. after merge
