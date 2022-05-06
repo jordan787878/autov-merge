@@ -283,7 +283,8 @@ def vis_actions(acts):
     fig, axs = plt.subplots(num_cars, 1, figsize=(7,7))
     for k in range(time):
         for i in range(num_cars):
-            axs[i].scatter(k,acts[k,i],c=colors[acts[k,i]])
+            axs[i].scatter(k+1,acts[k,i],c=colors[acts[k,i]])
+
     plt.suptitle('actions')
     plt.show()
 
@@ -293,11 +294,8 @@ def vis_xdiff(states):
     y_ego = states[:,1]
     time = np.arange(states.shape[0])
 
-    # Define safe x diff
-    safe_x_diff = 7
-
     # Get Ego Merge Time
-    time_merge = np.argwhere(y_ego > 1.0)[0]
+    time_merge = np.argwhere(y_ego >= 1.0)[0]
     time_merge = time_merge[0]
 
     # Init Min X Diff. after merge
@@ -306,12 +304,16 @@ def vis_xdiff(states):
     fig, axs = plt.subplots(num_hum_cars, 1, figsize = (7,7))
     for i in range(num_hum_cars):
         x_hum = states[:,4*(i+1)]
+        y_hum = states[:,4*(i+1)+1]
         x_diff = abs(x_ego-x_hum)
-        axs[i].plot(time[0:time_merge],x_diff[0:time_merge],'b')
-        axs[i].plot(time[time_merge-1:],x_diff[time_merge-1:],'r')
-        axs[i].plot(time,0*time + safe_x_diff,'g')
-        axs[i].set_ylim([0,25])
-        min_x_diff_merge[i] = np.min(x_diff[time_merge-1:])
+        y_diff = abs(y_ego-y_hum)
+        axs[i].plot(time,x_diff)
+        axs[i].plot(time,y_diff)
+        #axs[i].plot(time[0:time_merge],x_diff[0:time_merge],'b')
+        #axs[i].plot(time[time_merge-1:],x_diff[time_merge-1:],'r')
+        #axs[i].plot(time,0*time + safe_x_diff,'g')
+        axs[i].set_ylim([0,7])
+        #min_x_diff_merge[i] = np.min(x_diff[time_merge-1:])
 
     #print(min_x_diff_merge)
 

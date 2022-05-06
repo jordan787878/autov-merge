@@ -15,8 +15,8 @@ class ControlLongi:
             if x_diff <= 20:
                 if v_diff >= 5:
                     action = 1
-#                    print(" !!! ",self.car_my.id, "slow to cruise")
+                    print(" !!! ",self.car_my.id, "slow to cruise")
                 else:
                     action = 0
-#                    print(" !!! ",self.car_my.id, "slow to decel")
+                    print(" !!! ",self.car_my.id, "slow to decel")
         return action

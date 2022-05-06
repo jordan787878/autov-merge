@@ -9,14 +9,14 @@ from post_process import *
 import numpy as np
 from anim import ShowAnim
 
-NUM_SIMU = 10 
-VERBOSE = False
+#NUM_SIMU = 105
+VERBOSE = True
 MIN_X_DIFF = 5
 
 ### Data Setup ###
-OUTPUT_DIR = '../output/task9/'
+OUTPUT_DIR = '../output/task11/'
 DATA_NAME = 'data1.txt'
-LABEL = "0427_Single_HumanLeader_Test"
+LABEL = "0505_Task_FL"
 
 ### Setup ###
 dt = 0.1
@@ -24,28 +24,27 @@ V0 = 24
 HORIZON = 4 
 LANE_WIDTH = 2.5
 NUM_CARS = 4
-GOAL_X = 200
+STOP_X = 350
 dynamics = {"v_min":18,"v_max":30 ,"accel":3} # 18, 30, 3
 aspace_highway = np.array([0,1,2])
 aspace_merge   = np.array([0,1,2,3])
 
 ### Helper ###
 EXTEND = 10
+X0_H1 = np.array([-30])
+X0_H2 = np.arange(-20,15)
 
-def simulation():
+
+def simulation(x01, x02):
     ### Init X ###
-    x0_h1 = np.random.randint(-25,25)
-    x0_h1 = 15 
-    x0_h2 = np.random.randint(15,25)
-    x0_h2 = 200
-    x0_h3 = np.random.randint(30,40)
-    x0_h3 = 200
-    x0_e =  np.random.randint(0,40)
-    x0_e = 0 
+    x0_h1 = x01
+    x0_h2 = x02 
+    x0_h3 = 500
+    x0_e = 0
 
     # Random Choose Highway Label
     LF_labels = np.random.randint(2, size = 3)
-    LF_labels = np.array([1,1,1])
+    LF_labels = np.array([0,1,0])
     #print("L/F Labels: ",LF_labels)
 
     # Init Car
@@ -142,7 +141,7 @@ def simulation():
 
     ### Simulation ###
     while simu_done == False or simu_count <= EXTEND:
-        if abs(ego.s[1] - LANE_WIDTH) < 0.01 or ego.s[0] > GOAL_X:
+        if abs(ego.s[1] - LANE_WIDTH) < 0.01 or ego.s[0] > STOP_X:
             simu_done = True
             if abs(ego.s[1] - LANE_WIDTH) < 0.01:
                 merge_success = True
@@ -151,6 +150,7 @@ def simulation():
             simu_count += 1
 
         if VERBOSE:
+            print("LF roles: ", LF_labels)
             print("\n===== Step: ",i," =====")
         states.append(np.hstack((ego.s,hum1.s,hum2.s,hum3.s)))
         actions.append(np.hstack((ego.car_action,hum1.car_action,hum2.car_action,hum3.car_action)))
@@ -218,9 +218,14 @@ def save_dict(di):
 
 
 def main():
-    for i in range(NUM_SIMU):
-        print(i)
-        simulation()
+    for i in range(X0_H1.shape[0]):
+        for j in range(X0_H2.shape[0]):
+            print(X0_H1[i], X0_H2[j])
+            simulation(X0_H1[i], X0_H2[j])
+                    
+    #for i in range(NUM_SIMU):
+    #    print(i)
+    #    simulation(-50,X0_H2[i])
 
 
 ########################################################

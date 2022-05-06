@@ -2,12 +2,13 @@ import numpy as np
 from car2 import CarVer2
 from trajectory2 import *
 from visual2 import *
+from utility import *
 
 ##############################
 # For Merging Behavior Reward
 GOAL_X = 300
 # For Collision Detect
-MERGE_SAFE_DIST = 15 
+MERGE_SAFE_DIST = 10 
 ##############################
 
 
@@ -44,11 +45,18 @@ class ControlHumanFoll:
         for i in range(self.horizon+1):
             self.discount[i] = pow(0.9,i)
 
+        # Goal X
+        self.goal_x = GOAL_X
+
     ##################################################
     def select_action(self):
 #        print("### human follower select actions ###")
     
         #print("human1 real state: ", self.car_my.s)
+
+        # Update Parameters
+        self.update_goal_x()
+
 
         acts_opt, traj_opt = self.select_opt_actions(False, None)
 
@@ -73,24 +81,14 @@ class ControlHumanFoll:
     ###################################################
     def select_opt_actions(self, call_from_ego, actual_state):
         # Init Qli Matrix
-        Qf = np.zeros((self.num_act_my,self.num_act_op))
-        Qfi = np.zeros(self.num_act_my)
-
-        #############################################################
+        #Qf = np.zeros((self.num_act_my,self.num_act_op))
+        #Qfi = np.zeros(self.num_act_my)
+        
         # Get human trajectory
         traj_hum = get_hum_traj(self.car_my.s,
                                 self.act_set_my,
                                 self.car_my.horizon,
                                 self.car_my.dynamics)
-
-        # Get Ego Trajectory
-#        if self.name == "human1 follower":
-#            print("flag:\t",call_from_ego)
-
-        if call_from_ego == True:
-            self.car_op.s = actual_state
-#            if self.name == "human1 follower":
-#                print("pass in s_ego:\t",self.car_op.s)
 
         traj_ego = get_traj_ego(self.car_op.s,
                                 self.act_set_op,
@@ -99,28 +97,35 @@ class ControlHumanFoll:
                                 self.car_op.lane_width,
                                 self.car_op.dynamics)
 
-        #############################################################
-        # debug
-        R_colli = np.zeros((self.num_act_my,self.num_act_op))
-        R_col = np.zeros(self.num_act_my)
-
-        # Compute Qf Matrix
-        for i in range(self.num_act_my):
-            traj_hum0 = traj_hum[i,:]
-            for j in range(self.num_act_op):
-                traj_ego0 = traj_ego[j,:]
-                Qf[i,j], R_debug = self.compute_reward(traj_ego0,traj_hum0)
-                R_colli[i,j] = R_debug
-            Qfi[i] = np.min(Qf[i,:])
-            R_col[i] = np.min(R_colli[i,:])     
-
+        Qfi = Qf_hum(traj_ego, traj_hum, self.goal_x)
         traj_opt_idx = np.argmax(Qfi)
         traj_opt = traj_hum[traj_opt_idx,:,:]
         acts_opt = self.act_set_my[traj_opt_idx,:]
 
         return acts_opt, traj_opt
 
+        # Old
+        #R_colli = np.zeros((self.num_act_my,self.num_act_op))
+        #R_col = np.zeros(self.num_act_my)
+
+        # Compute Qf Matrix
+        #for i in range(self.num_act_my):
+        #    traj_hum0 = traj_hum[i,:]
+        #    for j in range(self.num_act_op):
+        #        traj_ego0 = traj_ego[j,:]
+        #        Qf[i,j], R_debug = self.compute_reward(traj_ego0,traj_hum0)
+        #        R_colli[i,j] = R_debug
+        #    Qfi[i] = np.min(Qf[i,:])
+        #    R_col[i] = np.min(R_colli[i,:])  
+
+   
+    def update_goal_x(self):
+        x0 = self.car_my.s[0]
+        if x0 >= (self.goal_x - 150):
+            self.goal_x += 300
+
     #######################################################
+    '''
     def compute_reward(self,traj_ego,traj_hum):
         ##### Highway Leader #####
         # Init
@@ -174,7 +179,7 @@ class ControlHumanFoll:
 
 
         return col_flag
-
+    '''
 
 
 

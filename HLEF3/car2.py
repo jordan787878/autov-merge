@@ -109,7 +109,7 @@ class CarVer2:
 
         v = v0 + u*dt
         v = np.clip(v,v_min,v_max)
-        x = x0 + v0*dt
+        x = x0 + v0*dt + 0.5*u*dt*dt
         y = np.clip(y,0,self.lane_width)
         yaw = yaw0
 

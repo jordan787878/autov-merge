@@ -16,11 +16,13 @@ def mvnpdf(traj,traj_F,traj_L):
     traj_L = traj_L.flatten()
     num_states = traj.shape[0]
     #print(num_states)
+    
     MEAN = np.zeros(num_states)
-    COV = np.eye(num_states)
+    COV = 0.1*np.eye(num_states)
     pdf_F = multivariate_normal.pdf(traj-traj_F, mean=MEAN, cov=COV)
     pdf_L = multivariate_normal.pdf(traj-traj_L, mean=MEAN, cov=COV)
     #print(pdf_F, pdf_L)
+    
     return pdf_F, pdf_L
 
 #mvnpdf(Traj, Traj_F, Traj_L)
